@@ -1,5 +1,5 @@
 #pragma once
-#include "Responce.h"
+#include "Response.h"
 #include "Table.h"
 
 #include <fstream>
@@ -12,15 +12,19 @@ namespace memdb {
 class Database
 {
 public:
-    Database(/* args */);
-    ~Database();
+    static Database& getInstance();
+
+    Database(const Database&) = delete;
+    Database operator=(const Database&) = delete;
 
     bool loadFromFile(std::ifstream);
     bool saveToFile(std::ofstream);
 
-    memdb::Responce execute(const std::string_view& str);
+    memdb::Response execute(const std::string_view& str);
 
 private:
+    Database();
+    ~Database();
     std::unordered_map<std::string, std::shared_ptr<TableBase>> tables_;
 };
 }

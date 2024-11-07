@@ -3,11 +3,13 @@
 
 namespace memdb
 {
-class Responce
+class Response
 {
 public:
-    Responce(/* args */);
-    ~Responce();
+    Response();
+    ~Response();
+
+    
 
 private:
     bool ok_;

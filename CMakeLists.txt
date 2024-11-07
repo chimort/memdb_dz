@@ -8,7 +8,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 set(SOURCES
     src/Database.cpp
-    src/Responce.cpp
+    src/Response.cpp
     src/Table.cpp
     # Add other source files here
 )
