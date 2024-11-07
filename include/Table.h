@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Config.h"
+
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -17,8 +19,6 @@ public:
 
 class Table : public TableBase {
 public:
-    using ColumnValue = std::variant<int, std::string, bool, std::vector<uint8_t>>; 
-    using RowType = std::unordered_map<std::string, ColumnValue>;
 
     Table(const std::vector<std::string>& column_names) : schema_(column_names) {
         for (const auto& columnNames : schema_) {
@@ -26,18 +26,18 @@ public:
         }
     }
 
-    void insert(const std::string& id, const RowType& row_data);
+    void insert(const std::string& id, const config::RowType& row_data);
     std::vector<std::string> findByCol(const std::string& column_name,
-                            const ColumnValue& value) const;
+                            const config::ColumnValue& value) const;
     void display() const override;
 
 private:
-    void indexRow(const std::string& id, const RowType& row);
-    std::size_t getKey(const ColumnValue& value) const;
-    void printValue(const ColumnValue& value) const;
+    void indexRow(const std::string& id, const config::RowType& row);
+    std::size_t getKey(const config::ColumnValue& value) const;
+    void printValue(const config::ColumnValue& value) const;
 
     std::vector<std::string> schema_;
-    std::unordered_map<std::string, RowType> data_;
+    std::unordered_map<std::string, config::RowType> data_;
     std::unordered_map<std::string,
         std::unordered_multimap<std::size_t, std::string>> indices_;
 };

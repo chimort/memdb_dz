@@ -1,33 +1,49 @@
 #pragma once
 
+#include "Config.h"
+
 #include <string>
 #include <string_view>
 #include <optional>
+#include <vector>
 #include <unordered_map>
+#include <optional>
 
 namespace memdb {
 namespace parser {
 
-enum class CommandType { SELECT, INSERT, UPDATE, DELETE, UNKNOWN };
+enum class CommandType { 
+    CREATE_TABLE,
+    SELECT, 
+    INSERT, 
+    UPDATE, 
+    DELETE, 
+    JOIN, 
+    CREATE_INDEX, 
+    UNKNOWN 
+};
+enum class IndexType { ORDERED, UNORDERED };
+
 
 class QueryParser {
 public:
-    QueryParser(const std::string_view& str);
+    QueryParser(const std::string& str) : str_(str) {}
     bool parse();
 
-    CommandType getCommandType() const;
-    std::optional<std::string_view> getTableName() const;
-    const std::unordered_map<std::string_view, std::string_view>& getParameters() const;
+    inline std::string getTableName() const { return table_name_; }
+    inline CommandType getCommandName() const { return command_type_; }
+    inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() { return values_; }
+
 
 private:
-    bool parseCommand();
-    bool parseTableName();
-    bool parseParameters();
-
-    std::string_view str_;
+    std::string str_;
+    std::string table_name_;
     CommandType command_type_;
-    std::optional<std::string_view> table_name_;
-    std::unordered_map<std::string_view, std::string_view> parameters_;
+    std::unordered_map<std::string, std::optional<config::ColumnValue>> values_;
+
+    bool commandParser();
+    bool createParse();
+    bool insertParse();
 };
 
 }
