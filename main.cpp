@@ -10,13 +10,23 @@ int main() {
 
     // Insert a record into the table
     std::string insert_query = "insert (id = 1, name = 'Alice', age = 30) to my_table";
-    memdb::Response response = db.execute(insert_query);
+    std::string dsag = "insert (,\"vasya\", 0xdeadbeefdeadbeef) to users";
+    //std::string fdh = "insert (\nis_admin = true,\nlogin = \"admin\",\npassword_hash = 0x0000000000000000\t) to users";
+    std::string sel = "select id, login from users where is_admin || id < 10";
+    std::string del = "delete users where |login| % 2 = 0";
+    std::string updt = "update users set login = login + \"_deleted\", is_admin = false where\npassword_hash < 0x00000000ffffffff";
 
-    if (response.getStatus()) {
-        std::cout << "Success: " << response.getMessage() << std::endl;
-    } else {
-        std::cout << "Error: " << response.getMessage() << std::endl;
-    }
+    memdb::Response response = db.execute(insert_query);
+    db.execute(dsag);
+    db.execute(sel);
+    db.execute(del);
+    db.execute(updt);
+
+    // if (response.getStatus()) {
+    //     std::cout << "Success: " << response.getMessage() << std::endl;
+    // } else {
+    //     std::cout << "Error: " << response.getMessage() << std::endl;
+    // }
 
     return 0;
 }

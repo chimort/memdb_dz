@@ -32,21 +32,31 @@ public:
 
     inline std::string getTableName() const { return table_name_; }
     inline CommandType getCommandName() const { return command_type_; }
+    inline std::string getCondition() const { return condition_; }
+    inline std::string getSetCondition() const { return set_condition_; }
+    inline std::vector<std::string> getSelectedCol() const { return selected_columns_; }
     inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() { return values_; }
     inline std::unordered_map<std::string, std::string> getInsertValues() { return insert_values_; }
 
 private:
     std::string str_;
     std::string table_name_;
+    std::string condition_; // where condition
+    std::string set_condition_;
     CommandType command_type_;
+    std::vector<std::string> selected_columns_;
     std::unordered_map<std::string, std::optional<config::ColumnValue>> values_;
     std::unordered_map<std::string, std::string> insert_values_;
-
-    bool commandParser();
+    std::unordered_map<std::string, std::string> update_values_;
+    
     bool createParse();
     bool insertParse();
+    bool selectParse();
+    bool deleteParse();
+    bool updateParse();
 
-    std::string trim(const std::string& str);
+    std::vector<std::string> splitByComma(const std::string &str);
+
 };
 
 }
