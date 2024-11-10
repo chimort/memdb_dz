@@ -1,16 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
-project(memdb)
+
+project(memdb_project)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(include)
 
 set(SOURCES
+    main.cpp
     src/Database.cpp
-    src/Response.cpp
     src/Table.cpp
-    # Add other source files here
+    src/QueryParser.cpp
+    src/Response.cpp
 )
 
-add_executable(memdb ${SOURCES})
+# Add executable
+add_executable(memdb_project ${SOURCES})

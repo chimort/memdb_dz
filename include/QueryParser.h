@@ -33,17 +33,20 @@ public:
     inline std::string getTableName() const { return table_name_; }
     inline CommandType getCommandName() const { return command_type_; }
     inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() { return values_; }
-
+    inline std::unordered_map<std::string, std::string> getInsertValues() { return insert_values_; }
 
 private:
     std::string str_;
     std::string table_name_;
     CommandType command_type_;
     std::unordered_map<std::string, std::optional<config::ColumnValue>> values_;
+    std::unordered_map<std::string, std::string> insert_values_;
 
     bool commandParser();
     bool createParse();
     bool insertParse();
+
+    std::string trim(const std::string& str);
 };
 
 }

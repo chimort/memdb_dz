@@ -23,8 +23,9 @@ public:
     memdb::Response execute(const std::string_view& str);
 
 private:
-    Database();
-    ~Database();
+    Database() = default;
+    ~Database() = default;
+
     std::unordered_map<std::string, std::shared_ptr<TableBase>> tables_;
 };
 }
