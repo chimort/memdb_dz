@@ -30,16 +30,15 @@ public:
 
 private:
     void indexRow(const std::string& id, const config::RowType& row);
-    std::size_t getKey(const config::ColumnValue& value) const;
-    void printValue(const config::ColumnValue& value) const;
+    size_t makeHashKey(const config::ColumnValue& value) const;
 
     config::ColumnValue getDefaultValue();
     bool convertValue(const std::string& value_str, config::ColumnValue& out_value);
 
     std::vector<std::string> schema_;
-    std::unordered_map<std::string, config::RowType> data_;
+    std::unordered_map<int, config::RowType> data_;
     std::unordered_map<std::string,
-        std::unordered_multimap<std::size_t, const config::RowType*>> indices_;
+        std::unordered_multimap<std::size_t, int>> indices_;
 
     size_t next_id_ = 1;
 };
