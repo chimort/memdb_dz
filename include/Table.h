@@ -39,7 +39,7 @@ private:
     std::vector<std::string> schema_;
     std::unordered_map<std::string, config::RowType> data_;
     std::unordered_map<std::string,
-        std::unordered_multimap<std::size_t, std::string>> indices_;
+        std::unordered_multimap<std::size_t, const config::RowType*>> indices_;
 
     size_t next_id_ = 1;
 };
