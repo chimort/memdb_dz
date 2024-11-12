@@ -11,7 +11,6 @@ set(SOURCES
     src/Database.cpp
     src/Table.cpp
     src/QueryParser.cpp
-    src/Response.cpp
 )
 
 # Add executable
