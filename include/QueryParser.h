@@ -49,7 +49,7 @@ private:
     std::unordered_map<std::string, std::string> insert_values_;
     std::unordered_map<std::string, std::string> update_values_;
     
-    bool createParse();
+    bool createTableParse();
     bool insertParse();
     bool selectParse();
     bool deleteParse();

@@ -1,5 +1,5 @@
 #pragma once
-#include "Response.h"
+//#include "Response.h"
 #include "Table.h"
 
 #include <fstream>
@@ -9,6 +9,14 @@
 #include <memory>
 
 namespace memdb {
+
+class IResponse {
+public:
+    virtual ~IResponse() = default;
+    virtual bool getStatus() const = 0;
+    virtual const std::string& getMessage() const = 0;
+};
+
 class Database
 {
 public:
@@ -20,12 +28,24 @@ public:
     bool loadFromFile(std::ifstream);
     bool saveToFile(std::ofstream);
 
-    memdb::Response execute(const std::string_view& str);
+    std::unique_ptr<IResponse> execute(const std::string_view& str);
+
+    std::shared_ptr<Table> getTable(const std::string& table_name);
 
 private:
     Database() = default;
     ~Database() = default;
 
-    std::unordered_map<std::string, std::shared_ptr<TableBase>> tables_;
+    struct Response : public IResponse {
+        bool status_;
+        std::string msg_;
+
+        inline void setStatus(const bool& status) { status_ = status; }
+        inline void setMessage(const std::string& msg) { msg_ = msg; }
+        inline bool getStatus() const override { return status_; }
+        inline const std::string& getMessage() const override { return msg_; }
+    };
+    
+    std::unordered_map<std::string, std::shared_ptr<Table>> tables_;
 };
 }

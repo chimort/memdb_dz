@@ -38,12 +38,15 @@ bool QueryParser::parse()
         command_type_ = CommandType::UPDATE;
         str_ = str_.substr(7); 
         updateParse();
+    } else {
+        command_type_ = CommandType::UNKNOWN;
+        return false;
     }
 
     return true;
 }
 
-bool QueryParser::createParse()
+bool QueryParser::createTableParse()
 {
     return false;
 }
