@@ -20,7 +20,7 @@ public:
         }
     }
 
-    void insert(const std::string& id, const config::RowType& row_data);
+    //void insert(const std::string& id, const config::RowType& row_data);
     std::vector<std::string> findByCol(const std::string& column_name,
                             const config::ColumnValue& value) const;
 
