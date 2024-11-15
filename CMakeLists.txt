@@ -6,12 +6,23 @@ set(CMAKE_CXX_STANDARD 20)
 
 include_directories(include)
 
-set(SOURCES
-    main.cpp
+set(LIB_SOURCES
     src/Database.cpp
     src/Table.cpp
     src/QueryParser.cpp
 )
 
-# Add executable
-add_executable(memdb_project ${SOURCES})
+add_library(memdb_lib ${LIB_SOURCES})
+
+
+add_executable(memdb_project main.cpp)
+target_link_libraries(memdb_project memdb_lib)
+
+add_subdirectory(googletest)
+
+set(TEST_FILES
+    tests/parser_tests.cpp
+)
+
+add_executable(tests ${TEST_FILES})
+target_link_libraries(tests memdb_lib gtest gtest_main)

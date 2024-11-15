@@ -17,7 +17,7 @@ config::ColumnValue getDefaultValue() {
     return ""; // Заглушка, тут нужно будет какую-то проверку по типам сделать
 }
 
-void Table::indexRow(const std::string& id, const config::RowType& row) {
+void Table::indexRow(const int& id, const config::RowType& row) {
     for (const auto& column: schema_) {
         auto value = row.at(column);
         size_t hash_value = makeHashKey(value);
