@@ -29,7 +29,7 @@ public:
     void printAllRecords() const;
 
 private:
-    void indexRow(const std::string& id, const config::RowType& row);
+    void indexRow(const int& id, const config::RowType& row);
     size_t makeHashKey(const config::ColumnValue& value) const;
 
     config::ColumnValue getDefaultValue();
