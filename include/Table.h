@@ -28,7 +28,11 @@ public:
     
     void printAllRecords() const;
 
+    bool saveToCSV(std::ofstream& ofs) const ;
+
 private:
+    std::string convertColumnValueToString(const config::ColumnValue& value) const;
+
     void indexRow(const int& id, const config::RowType& row);
     size_t makeHashKey(const config::ColumnValue& value) const;
 

@@ -22,6 +22,7 @@ add_subdirectory(googletest)
 
 set(TEST_FILES
     tests/parser_tests.cpp
+    tests/files_tests.cpp
 )
 
 add_executable(tests ${TEST_FILES})

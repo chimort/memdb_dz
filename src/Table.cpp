@@ -1,6 +1,8 @@
 #include "Table.h"
+#include "Config.h"
 
-#include <functional>
+#include <fstream>
+#include <string>
 
 namespace memdb 
 {
@@ -42,6 +44,57 @@ size_t Table::makeHashKey(const config::ColumnValue &value) const
 
 
 void Table::printAllRecords() const {
+}
+
+bool Table::saveToCSV(std::ofstream& ofs) const
+{
+    for (size_t i = 0; i < schema_.size(); ++i) {
+        ofs << schema_[i];
+        if (i != schema_.size() - 1)
+            ofs << ',';
+    }
+    ofs << '\n';
+
+    for (const auto& [id, row] : data_) {
+        for (size_t i = 0; i < schema_.size(); ++i) {
+            const auto& column_name = schema_[i];
+            auto it = row.find(column_name);
+            if (it != row.end()) {
+                const std::string value_str = convertColumnValueToString(it->second);
+                ofs << value_str;
+            } else {
+                ofs << "";
+            }
+
+            if (i != schema_.size() - 1)
+                ofs << ',';
+        }
+        ofs << '\n';
+    }
+
+    return true;
+}
+
+std::string Table::convertColumnValueToString(const config::ColumnValue& value) const
+{
+    return std::visit([](const auto& val) -> std::string {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, int>) {
+            return std::to_string(val);
+        } else if constexpr (std::is_same_v<T, std::string>) {
+            std::string escaped = val;
+            size_t pos = 0;
+            while ((pos = escaped.find('"', pos)) != std::string::npos) {
+                escaped.insert(pos, 1, '"');
+                pos += 2;
+            }
+            return '"' + escaped + '"';
+        } else if constexpr (std::is_same_v<T, bool>) {
+            return val ? "true" : "false";
+        } else {
+            return "";
+        }
+    }, value);
 }
 
 

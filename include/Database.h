@@ -25,8 +25,8 @@ public:
     Database(const Database&) = delete;
     Database operator=(const Database&) = delete;
 
-    bool loadFromFile(std::ifstream);
-    bool saveToFile(std::ofstream);
+    bool loadFromFile(std::ifstream& ifs) const;
+    bool saveToFile(const std::string& filename, const std::string& table_name) const;
 
     std::unique_ptr<IResponse> execute(const std::string_view& str);
 
