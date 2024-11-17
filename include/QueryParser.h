@@ -35,8 +35,8 @@ public:
     inline std::string getCondition() const { return condition_; }
     inline std::string getSetCondition() const { return set_condition_; }
     inline std::vector<std::string> getSelectedCol() const { return selected_columns_; }
-    inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() { return values_; }
-    inline std::unordered_map<std::string, std::string> getInsertValues() { return insert_values_; }
+    inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() const { return values_; }
+    inline std::unordered_map<std::string, std::string> getInsertValues() const { return insert_values_; }
 
 private:
     std::string str_;

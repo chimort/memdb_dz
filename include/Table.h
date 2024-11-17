@@ -40,7 +40,6 @@ private:
     std::unordered_map<std::string,
         std::unordered_multimap<std::size_t, int>> indices_;
 
-    size_t next_id_ = 1;
 };
     
 } // namespace memdb
