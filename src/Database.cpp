@@ -12,14 +12,48 @@ Database& Database::getInstance()
     return instance;
 }
 
-bool Database::loadFromFile(std::ifstream)
+bool Database::loadFromFile(const std::string& filename, const std::string& table_name)
 {
-    return false;
+    auto it = tables_.find(table_name);
+    if (it == tables_.end()) {
+        std::cerr << "Table '" << table_name << "' not found." << std::endl;
+        return false;
+    }
+
+    std::ifstream ifs(filename);
+    if (!ifs.is_open()) {
+        std::cerr << "Failed to open file for reading: " << filename << std::endl;
+        return false;
+    }
+
+    if (!it->second->loadFromCSV(ifs)) {
+        std::cerr << "Failed to load table '" << table_name << "' from CSV." << std::endl;
+        return false;
+    }
+
+    return true;
 }
 
-bool Database::saveToFile(std::ofstream)
+bool Database::saveToFile(const std::string& filename, const std::string& table_name) const
 {
-    return false;
+    auto it = tables_.find(table_name);
+    if (it == tables_.end()) {
+        std::cerr << "Table '" << table_name << "' not found." << std::endl;
+        return false;
+    }
+
+    std::ofstream ofs(filename);
+    if (!ofs.is_open()) {
+        std::cerr << "Failed to open file for writing: " << filename << std::endl;
+        return false;
+    }
+
+    if (!it->second->saveToCSV(ofs)) {
+        std::cerr << "Failed to save table '" << table_name << "' to CSV." << std::endl;
+        return false;
+    }
+
+    return true;
 }
 
 std::unique_ptr<IResponse> Database::execute(const std::string_view &str)
