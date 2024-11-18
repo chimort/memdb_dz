@@ -31,11 +31,13 @@ public:
 
     inline const std::unordered_map<int, config::RowType>& getData() const { return data_; }
 
-    bool saveToCSV(std::ofstream& ofs) const ;
+    bool saveToCSV(std::ofstream& ofs) const;
+    bool loadFromCSV(std::istream& is);
 
 private:
     std::string convertColumnValueToString(const config::ColumnValue& value) const;
-
+    std::vector<std::string> parseCSVLine(const std::string& line) const;
+    
     void indexRow(const int& id, const config::RowType& row);
     size_t makeHashKey(const config::ColumnValue& value) const;
 

@@ -5,6 +5,10 @@
 #include <string>
 #include <charconv>
 #include <functional>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
 
 namespace memdb 
 {
@@ -227,19 +231,25 @@ size_t Table::makeHashKey(const config::ColumnValue& value) const
     }, value);
 }
 
-
 bool Table::saveToCSV(std::ofstream& ofs) const
 {
     for (size_t i = 0; i < schema_.size(); ++i) {
-        ofs << schema_[i];
+        ofs << schema_[i].name; 
         if (i != schema_.size() - 1)
             ofs << ',';
     }
     ofs << '\n';
 
+    std::vector<int> ids;
     for (const auto& [id, row] : data_) {
+        ids.push_back(id);
+    }
+    std::sort(ids.begin(), ids.end());
+
+    for (const int& id : ids) {
+        const auto& row = data_.at(id);
         for (size_t i = 0; i < schema_.size(); ++i) {
-            const auto& column_name = schema_[i];
+            const auto& column_name = schema_[i].name; 
             auto it = row.find(column_name);
             if (it != row.end()) {
                 const std::string value_str = convertColumnValueToString(it->second);
@@ -270,14 +280,110 @@ std::string Table::convertColumnValueToString(const config::ColumnValue& value) 
                 escaped.insert(pos, 1, '"');
                 pos += 2;
             }
-            return '"' + escaped + '"';
+            if (escaped.find(',') != std::string::npos || escaped.find('\n') != std::string::npos || escaped.find('"') != std::string::npos) {
+                escaped = '"' + escaped + '"';
+            }
+            return escaped;
         } else if constexpr (std::is_same_v<T, bool>) {
             return val ? "true" : "false";
+        } else if constexpr (std::is_same_v<T, config::BitString>) {
+            std::ostringstream oss;
+            oss << "0x";
+            for (uint8_t byte : val) {
+                oss << std::hex << std::uppercase << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+            }
+            return oss.str();
         } else {
             return "";
         }
     }, value);
 }
 
+bool Table::loadFromCSV(std::istream& is)
+{
+    std::string line;
+    if (!std::getline(is, line)) {
+        return false;
+    }
+
+    std::vector<std::string> headers = parseCSVLine(line);
+
+    if (headers.size() != schema_.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < headers.size(); ++i) {
+        if (headers[i] != schema_[i].name) {
+            return false;
+        }
+    }
+
+    data_.clear();
+    next_id_ = 0;
+
+    std::string record;
+    while (std::getline(is, line)) {
+        if (!record.empty()) {
+            record += "\n";
+        }
+        record += line;
+
+        size_t quote_count = std::count(record.begin(), record.end(), '"');
+        if (quote_count % 2 != 0) {
+            continue;
+        }
+
+        std::vector<std::string> fields = parseCSVLine(record);
+        if (fields.size() != headers.size()) {
+            return false;
+        }
+
+        std::unordered_map<std::string, std::string> insert_values;
+        for (size_t i = 0; i < headers.size(); ++i) {
+            insert_values[headers[i]] = fields[i];
+        }
+
+        if (!insertRecord(insert_values)) {
+            return false;
+        }
+        record.clear();
+    }
+
+    return true;
+}
+
+std::vector<std::string> Table::parseCSVLine(const std::string& line) const
+{
+    std::vector<std::string> fields;
+    std::string field;
+    bool inside_quotes = false;
+
+    for (size_t i = 0; i <= line.length(); ++i) {
+        char c = (i < line.length()) ? line[i] : '\0';
+
+        if (inside_quotes) {
+            if (c == '"') {
+                if (i + 1 < line.length() && line[i + 1] == '"') {
+                    field += '"';
+                    ++i;
+                } else {
+                    inside_quotes = false;
+                }
+            } else {
+                field += c;
+            }
+        } else {
+            if (c == '"') {
+                inside_quotes = true;
+            } else if (c == ',' || c == '\0') {
+                fields.push_back(field);
+                field.clear();
+            } else {
+                field += c;
+            }
+        }
+    }
+
+    return fields;
+}
 
 }
