@@ -24,6 +24,19 @@ enum class CommandType {
 };
 enum class IndexType { ORDERED, UNORDERED };
 
+enum class ColumnType { 
+    INT, 
+    STRING, 
+    BOOL, 
+    BITSTRING 
+};
+
+
+struct ColumnsParametrs {
+    ColumnType type;
+    std::string default_value;
+    bool attributes[3] = {0}; // {unique, autoincrement, key}
+};
 
 class QueryParser {
 public:
@@ -37,6 +50,7 @@ public:
     inline std::vector<std::string> getSelectedCol() const { return selected_columns_; }
     inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() const { return values_; }
     inline std::unordered_map<std::string, std::string> getInsertValues() const { return insert_values_; }
+    inline std::unordered_map<std::string, ColumnsParametrs> getCreateValues() const { return columns_parametrs_; };
 
 private:
     std::string str_;
@@ -48,6 +62,7 @@ private:
     std::unordered_map<std::string, std::optional<config::ColumnValue>> values_;
     std::unordered_map<std::string, std::string> insert_values_;
     std::unordered_map<std::string, std::string> update_values_;
+    std::unordered_map<std::string, ColumnsParametrs> columns_parametrs_;
     
     bool createTableParse();
     bool insertParse();
