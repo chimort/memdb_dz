@@ -9,37 +9,48 @@ namespace memdb
 
 bool Table::insertRecord(const std::unordered_map<std::string, std::string>& insert_values) 
 {
-    config::RowType row;
-
     if (insert_values.empty()) {
         return false;
     }
 
-    int id_value = -1; // это нужно, чтобы проверить был ли id в запросе
+    config::RowType row;
+    int id_value = -1;
 
     for (const auto& [column_name, value_str] : insert_values) {
+        // Ищем колонку в схеме
         auto schema_it = std::find_if(schema_.begin(), schema_.end(),
-            [&column_name](const auto& pair) { return pair.first == column_name; });
+            [&column_name](const auto& col) { return col.name == column_name; });
         if (schema_it == schema_.end()) {
-            return false;
+            return false; // Колонка не найдена
         }
-        config::ColumnType expected_type = schema_it->second;
+        const config::ColumnSchema& column_schema = *schema_it;
 
+        // Преобразуем значение с учётом ограничений
         config::ColumnValue value;
-        if (!convertValue(value_str, expected_type, value)) {
-            return false;
+        if (!convertValue(value_str, column_schema, value)) {
+            return false; // Ошибка конвертации или превышен размер
         }
         row[column_name] = value;
 
+        // Обработка 'id'
         if (column_name == "id") {
             if (std::holds_alternative<int>(value)) {
                 id_value = std::get<int>(value);
             } else {
-                return false;
+                return false; // 'id' должен быть типа INT
             }
         }
     }
 
+    // Заполнение отсутствующих колонок значениями по умолчанию
+    for (const auto& column_schema : schema_) {
+        const std::string& column_name = column_schema.name;
+        if (row.find(column_name) == row.end()) {
+            row[column_name] = getDefaultValue(column_schema.type);
+        }
+    }
+
+    // Обработка 'id'
     int id;
     if (id_value == -1) {
         id = next_id_++;
@@ -55,56 +66,53 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         }
     }
 
-    for (const auto& [column_name, column_type] : schema_) {
-        if (row.find(column_name) == row.end()) {
-            row[column_name] = getDefaultValue(column_type);
-        }
-    }
-
     data_[id] = row;
     indexRow(id, row);
-
     return true;
 }
 
 bool Table::insertRecord(const std::vector<std::string>& insert_values) 
 {
     if (insert_values.empty() || insert_values.size() > schema_.size()) {
-        return false;
+        return false; // Нет значений для вставки или слишком много значений
     }
 
     config::RowType row;
-    auto schema_it = schema_.rbegin();
-    auto value_it = insert_values.rbegin();
+    size_t num_columns = schema_.size();
+    size_t num_values = insert_values.size();
+    int id_value = -1;
 
-    int id_value = -1; // Тоже самое, что и в методе выше
-
-    while (value_it != insert_values.rend() && schema_it != schema_.rend()) {
-        const auto& [column_name, column_type] = *schema_it;
+    // Сопоставляем значения с колонками, начиная с конца схемы
+    for (size_t i = 0; i < num_values; ++i) {
+        size_t schema_index = num_columns - num_values + i;
+        const config::ColumnSchema& column_schema = schema_[schema_index];
+        const std::string& column_name = column_schema.name;
         config::ColumnValue value;
-        if (!convertValue(*value_it, column_type, value)) {
-            return false; 
+        if (!convertValue(insert_values[i], column_schema, value)) {
+            return false; // Ошибка конвертации значения
         }
         row[column_name] = value;
 
+        // Обработка 'id'
         if (column_name == "id") {
             if (std::holds_alternative<int>(value)) {
                 id_value = std::get<int>(value);
             } else {
-                return false; 
+                return false; // 'id' должен быть типа INT
             }
         }
-
-        ++value_it;
-        ++schema_it;
     }
 
-    while (schema_it != schema_.rend()) {
-        const auto& [column_name, column_type] = *schema_it;
-        row[column_name] = getDefaultValue(column_type);
-        ++schema_it;
+    // Заполнение оставшихся колонок значениями по умолчанию
+    for (size_t i = 0; i < num_columns - num_values; ++i) {
+        const config::ColumnSchema& column_schema = schema_[i];
+        const std::string& column_name = column_schema.name;
+        if (row.find(column_name) == row.end()) {
+            row[column_name] = getDefaultValue(column_schema.type);
+        }
     }
 
+    // Обработка 'id'
     int id;
     if (id_value == -1) {
         id = next_id_++;
@@ -122,14 +130,13 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
     data_[id] = row;
     indexRow(id, row);
-
     return true;
 }
 
-bool Table::convertValue(const std::string& value_str, 
-    config::ColumnType expected_type, config::ColumnValue& out_value)
+bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, 
+    config::ColumnValue& out_value) 
 {
-    switch (expected_type) {
+    switch (column_schema.type) {
         case config::ColumnType::INT: {
             int int_value;
             auto [ptr, ec] = std::from_chars(value_str.data(), value_str.data() + value_str.size(), int_value);
@@ -149,6 +156,13 @@ bool Table::convertValue(const std::string& value_str,
             }
             return false;
         }
+        case config::ColumnType::STRING: {
+            if (value_str.size() > column_schema.max_size) {
+                return false; // Превышен максимальный размер строки
+            }
+            out_value = value_str;
+            return true;
+        }
         case config::ColumnType::BITSTRING: {
             if (value_str.size() > 2 && value_str[0] == '0' && (value_str[1] == 'x' || value_str[1] == 'X')) {
                 std::string hex_str = value_str.substr(2);
@@ -165,14 +179,13 @@ bool Table::convertValue(const std::string& value_str,
                     }
                     bit_string.push_back(byte_value);
                 }
+                if (bit_string.size() > column_schema.max_size) {
+                    return false; // Превышен максимальный размер битовой строки
+                }
                 out_value = bit_string;
                 return true;
             }
             return false;
-        }
-        case config::ColumnType::STRING: {
-            out_value = value_str;
-            return true;
         }
         default:
             return false;
@@ -195,9 +208,9 @@ config::ColumnValue Table::getDefaultValue(config::ColumnType column_type)
     }
 }
 
-void Table::indexRow(const int& id, const config::RowType& row) 
-{
-    for (const auto& [column_name, _] : schema_) {
+void Table::indexRow(const int& id, const config::RowType& row) {
+    for (const auto& column_schema : schema_) {
+        const std::string& column_name = column_schema.name;
         auto it = row.find(column_name);
         if (it != row.end()) {
             const auto& value = it->second;

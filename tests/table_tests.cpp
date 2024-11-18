@@ -7,16 +7,15 @@
 
 class TableTest : public ::testing::Test {
 protected:
-    // Если необходимо, можно добавить настройки для всех тестов
 };
 
 // Тест вставки с указанием названий колонок
 TEST_F(TableTest, InsertWithColumnNames) {
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"name", config::ColumnType::STRING},
-        {"age", config::ColumnType::INT},
-        {"active", config::ColumnType::BOOL}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"active", config::ColumnType::BOOL, 0}
     };
     memdb::Table table(columns);
 
@@ -64,11 +63,11 @@ TEST_F(TableTest, InsertWithColumnNames) {
 
 // Тест вставки без указания названий колонок
 TEST_F(TableTest, InsertWithoutColumnNames) {
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"name", config::ColumnType::STRING},
-        {"age", config::ColumnType::INT},
-        {"active", config::ColumnType::BOOL}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"active", config::ColumnType::BOOL, 0}
     };
     memdb::Table table(columns);
 
@@ -118,11 +117,11 @@ TEST_F(TableTest, InsertWithoutColumnNames) {
 
 // Тест вставки с отсутствующими значениями
 TEST_F(TableTest, InsertWithMissingValues) {
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"name", config::ColumnType::STRING},
-        {"age", config::ColumnType::INT},
-        {"active", config::ColumnType::BOOL}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"active", config::ColumnType::BOOL, 0}
     };
     memdb::Table table(columns);
 
@@ -171,9 +170,9 @@ TEST_F(TableTest, InsertWithMissingValues) {
 
 // Тест вставки с лишними значениями без указания названий колонок
 TEST_F(TableTest, InsertExcessValuesWithoutColumnNames) {
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"name", config::ColumnType::STRING}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255}
     };
     memdb::Table table(columns);
 
@@ -212,11 +211,11 @@ TEST_F(TableTest, InsertExcessValuesWithoutColumnNames) {
 
 // Тест вставки с невалидным значением для INT
 TEST_F(TableTest, InsertInvalidIntValue) {
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"name", config::ColumnType::STRING},
-        {"age", config::ColumnType::INT},
-        {"active", config::ColumnType::BOOL}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"active", config::ColumnType::BOOL, 0}
     };
     memdb::Table table(columns);
 
@@ -254,14 +253,13 @@ TEST_F(TableTest, InsertInvalidIntValue) {
     }
 }
 
-
 // Тест вставки значений в конец схемы без указания названий колонок
 TEST_F(TableTest, InsertValuesAtEndOfSchema) {
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"name", config::ColumnType::STRING},
-        {"age", config::ColumnType::INT},
-        {"car", config::ColumnType::BOOL}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"car", config::ColumnType::BOOL, 0}
     };
     memdb::Table table(columns);
 
@@ -317,15 +315,14 @@ TEST_F(TableTest, InsertValuesAtEndOfSchema) {
     }
 }
 
-
 // Тест вставки с использованием BitString и значений по умолчанию
 TEST_F(TableTest, InsertWithBitStringValues) {
     // Определяем таблицу с колонками разных типов, включая две колонки типа BitString
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"data1", config::ColumnType::BITSTRING},
-        {"data2", config::ColumnType::BITSTRING},
-        {"description", config::ColumnType::STRING}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"data1", config::ColumnType::BITSTRING, 8},   // Предполагаемый max_size = 8 байт
+        {"data2", config::ColumnType::BITSTRING, 8},
+        {"description", config::ColumnType::STRING, 255}
     };
     memdb::Table table(columns);
 
@@ -409,9 +406,9 @@ TEST_F(TableTest, InsertWithBitStringValues) {
 
 // Тест автоинкремента 'id' и проверки на существующий 'id'
 TEST_F(TableTest, AutoIncrementIdAndDuplicateCheck) {
-    std::vector<std::pair<std::string, config::ColumnType>> columns = {
-        {"id", config::ColumnType::INT},
-        {"name", config::ColumnType::STRING}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255}
     };
     memdb::Table table(columns);
 
@@ -439,10 +436,7 @@ TEST_F(TableTest, AutoIncrementIdAndDuplicateCheck) {
     };
     EXPECT_TRUE(table.insertRecord(insert_values4));
 
-    // Проверяем, что 'next_id_' обновился до 12
-    // Внутри класса 'Table' 'next_id_' приватный, поэтому прямо проверить не можем
-    // Проверим по наличию записей с соответствующими 'id'
-
+    // Проверяем, что количество записей равно 4
     const auto& data = table.getData();
     EXPECT_EQ(data.size(), 4);
 
@@ -465,4 +459,73 @@ TEST_F(TableTest, AutoIncrementIdAndDuplicateCheck) {
 
     // Проверяем, что запись не добавилась
     EXPECT_EQ(data.size(), 4);
+}
+
+// Тест вставки строки и битовой последовательности, превышающих максимальный размер
+TEST_F(TableTest, InsertValueExceedsMaxSize) {
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 10}, // Максимальный размер строки - 10 символов
+        {"data", config::ColumnType::BITSTRING, 4} // Максимальный размер битовой строки - 4 байта
+    };
+    memdb::Table table(columns);
+
+    // Строка, превышающая максимальный размер
+    std::string long_string = "This string is definitely longer than 10 characters";
+
+    // Битовая строка, превышающая максимальный размер (например, 5 байт при max_size = 4)
+    std::string long_bitstring = "0xDEADBEEFCAFE";
+
+    // Попытка вставить запись с длинной строкой
+    std::unordered_map<std::string, std::string> insert_values_string = {
+        {"id", "1"},
+        {"name", long_string}
+    };
+
+    bool result_string = table.insertRecord(insert_values_string);
+    EXPECT_FALSE(result_string);
+
+    std::cout << "[InsertValueExceedsMaxSize] Попытка вставить длинную строку: " << (result_string ? "успешно" : "неудачно") << std::endl;
+
+    // Попытка вставить запись с длинной битовой строкой
+    std::unordered_map<std::string, std::string> insert_values_bitstring = {
+        {"id", "2"},
+        {"data", long_bitstring}
+    };
+
+    bool result_bitstring = table.insertRecord(insert_values_bitstring);
+    EXPECT_FALSE(result_bitstring);
+
+    std::cout << "[InsertValueExceedsMaxSize] Попытка вставить длинную битовую строку: " << (result_bitstring ? "успешно" : "неудачно") << std::endl;
+
+    // Убеждаемся, что записи не вставились
+    const auto& data = table.getData();
+    EXPECT_EQ(data.size(), 0);
+
+    if (data.empty()) {
+        std::cout << "[InsertValueExceedsMaxSize] Таблица пуста, как и ожидалось." << std::endl;
+    } else {
+        std::cout << "[InsertValueExceedsMaxSize] Таблица содержит данные, что не соответствует ожиданиям." << std::endl;
+    }
+
+    // Строка ровно максимального размера
+    std::string max_size_string = "1234567890"; // 10 символов
+
+    // Битовая строка ровно максимального размера (4 байта)
+    std::string max_size_bitstring = "0xDEADBEEF"; // 4 байта
+
+    // Попытка вставить запись с допустимыми значениями
+    std::unordered_map<std::string, std::string> insert_values_valid = {
+        {"id", "3"},
+        {"name", max_size_string},
+        {"data", max_size_bitstring}
+    };
+
+    bool result_valid = table.insertRecord(insert_values_valid);
+    EXPECT_TRUE(result_valid);
+
+    std::cout << "[InsertValueExceedsMaxSize] Вставка допустимых значений: " << (result_valid ? "успешно" : "неудачно") << std::endl;
+
+    // Убеждаемся, что запись вставилась
+    EXPECT_EQ(table.getData().size(), 1);
 }
