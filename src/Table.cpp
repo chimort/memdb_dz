@@ -17,32 +17,28 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     int id_value = -1;
 
     for (const auto& [column_name, value_str] : insert_values) {
-        // Ищем колонку в схеме
         auto schema_it = std::find_if(schema_.begin(), schema_.end(),
             [&column_name](const auto& col) { return col.name == column_name; });
         if (schema_it == schema_.end()) {
-            return false; // Колонка не найдена
+            return false; 
         }
         const config::ColumnSchema& column_schema = *schema_it;
 
-        // Преобразуем значение с учётом ограничений
         config::ColumnValue value;
         if (!convertValue(value_str, column_schema, value)) {
-            return false; // Ошибка конвертации или превышен размер
+            return false; 
         }
         row[column_name] = value;
 
-        // Обработка 'id'
         if (column_name == "id") {
             if (std::holds_alternative<int>(value)) {
                 id_value = std::get<int>(value);
             } else {
-                return false; // 'id' должен быть типа INT
+                return false;
             }
         }
     }
 
-    // Заполнение отсутствующих колонок значениями по умолчанию
     for (const auto& column_schema : schema_) {
         const std::string& column_name = column_schema.name;
         if (row.find(column_name) == row.end()) {
@@ -50,7 +46,6 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         }
     }
 
-    // Обработка 'id'
     int id;
     if (id_value == -1) {
         id = next_id_++;
@@ -74,7 +69,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
 bool Table::insertRecord(const std::vector<std::string>& insert_values) 
 {
     if (insert_values.empty() || insert_values.size() > schema_.size()) {
-        return false; // Нет значений для вставки или слишком много значений
+        return false;
     }
 
     config::RowType row;
@@ -82,28 +77,25 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     size_t num_values = insert_values.size();
     int id_value = -1;
 
-    // Сопоставляем значения с колонками, начиная с конца схемы
     for (size_t i = 0; i < num_values; ++i) {
         size_t schema_index = num_columns - num_values + i;
         const config::ColumnSchema& column_schema = schema_[schema_index];
         const std::string& column_name = column_schema.name;
         config::ColumnValue value;
         if (!convertValue(insert_values[i], column_schema, value)) {
-            return false; // Ошибка конвертации значения
+            return false; 
         }
         row[column_name] = value;
 
-        // Обработка 'id'
         if (column_name == "id") {
             if (std::holds_alternative<int>(value)) {
                 id_value = std::get<int>(value);
             } else {
-                return false; // 'id' должен быть типа INT
+                return false; 
             }
         }
     }
 
-    // Заполнение оставшихся колонок значениями по умолчанию
     for (size_t i = 0; i < num_columns - num_values; ++i) {
         const config::ColumnSchema& column_schema = schema_[i];
         const std::string& column_name = column_schema.name;
@@ -112,7 +104,6 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         }
     }
 
-    // Обработка 'id'
     int id;
     if (id_value == -1) {
         id = next_id_++;
