@@ -49,7 +49,9 @@ std::unique_ptr<IResponse> Database::execute(const std::string_view &str)
                 response->setMessage("Table not found for insert");
                 return response;
             }
-
+            // Вот тут надо будет подшаманить, потому что у нас два метода
+            // Потому что у нас 2 метода ставки, с жестким указанием (age = 234) и просто значения
+            // В один из них передаем вектор строк, а в другой словарик
             auto& table = table_it->second;
             bool success = table->insertRecord(insert_values);
             if (success) {
