@@ -74,8 +74,7 @@ std::vector<std::string> QueryParser::splitByComma(const std::string& str) {
 bool QueryParser::createTableParse() {
     std::smatch match;
 
-    // Регулярное выражение для заголовка таблицы
-    std::regex table_regex(R"(^\s*create\s+table\s+(\w+)\s*\((.*)\)\s*$)");
+    std::regex table_regex(R"(^\s*create\s+table\s+(\w+)\s*\(([\s\S]*)\)\s*$)", std::regex_constants::icase);
     if (!std::regex_match(str_, match, table_regex)) {
         throw std::invalid_argument("Invalid create table syntax");
     }
@@ -84,7 +83,7 @@ bool QueryParser::createTableParse() {
     std::string columns_str = match[2]; // Строка с описанием колонок
 
     // Регулярное выражение для разбора колонок
-    std::regex column_regex(R"((?:\{([^}]*)\}\s*)?(\w+)\s*:\s*(\w+\[?\d*\]?)\s*(?:=\s*([^,]*))?)");
+    std::regex column_regex(R"((?:\{\s*([^}]*)\s*\}\s*)?(\w+)\s*:\s*(\w+\[?\d*\]?)\s*(?:=\s*([^,]*))?)");
 
     std::sregex_iterator it(columns_str.begin(), columns_str.end(), column_regex);
     std::sregex_iterator end;
@@ -99,17 +98,19 @@ bool QueryParser::createTableParse() {
             std::sregex_token_iterator attr_it(attributes.begin(), attributes.end(), attr_split_regex, -1);
             std::sregex_token_iterator attr_end;
             while (attr_it != attr_end) {
-                std::string attributes = *attr_it++;
-                switch (attributes[0]){
-                    case 'u':
-                        params.attributes[0] = 1;
-                        break;
-                    case 'a':
-                        params.attributes[1] = 1;
-                        break;
-                    default:
-                        params.attributes[2] = 1;
-                        break;
+                std::string attribute = *attr_it++;
+                if (!attribute.empty()) {
+                    switch (attribute[0]) {
+                        case 'u':
+                            params.attributes[0] = 1;
+                            break;
+                        case 'a':
+                            params.attributes[1] = 1;
+                            break;
+                        default:
+                            params.attributes[2] = 1;
+                            break;
+                    }
                 }
             }
         }
@@ -117,19 +118,19 @@ bool QueryParser::createTableParse() {
         // Имя, тип и значение по умолчанию
         std::string name = (*it)[2];
         std::string type = (*it)[3];
-        if (type == "bool"){
+        if (type == "bool") {
             params.type = ColumnType::BOOL;
         } else {
-            switch (type[0]){
-            case 'b':
-                params.type = ColumnType::BITSTRING;
-                break;
-            case 'i':
-                params.type = ColumnType::INT;
-                break;
-            default:
-                params.type = ColumnType::STRING;
-                break;
+            switch (type[0]) {
+                case 'b':
+                    params.type = ColumnType::BITSTRING;
+                    break;
+                case 'i':
+                    params.type = ColumnType::INT;
+                    break;
+                default:
+                    params.type = ColumnType::STRING;
+                    break;
             }
         }
 
@@ -143,6 +144,7 @@ bool QueryParser::createTableParse() {
 
     return true;
 }
+
 
 bool QueryParser::insertParse() {
     size_t open_paren_pos = str_.find('(');

@@ -50,7 +50,7 @@ TEST(QueryParserTest, InsertParseTest) {
 }
 
 TEST(QueryParserTest, CreateParseTest) {
-    std::string create_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin : bool = false)";
+    std::string create_query = "create table users ({key, autoincrement} id : int32 = 5000,\n {unique} login: string[32] = 'Привет БД', password_hash: bytes[8], is_admin : bool = false)";
     QueryParser parser(create_query);
     
     std::cout << "Testing query: " << create_query << std::endl;
@@ -73,9 +73,9 @@ TEST(QueryParserTest, CreateParseTest) {
 
     std::unordered_map<std::string, Columns> columns_parametrs_ = {
 
-        {"id", {"int", {}, {"key", "autoincrement"}}},
+        {"id", {"int", {"5000"}, {"key", "autoincrement"}}},
 
-        {"login", {"string[32]", {}, {"unique"}}},
+        {"login", {"string[32]", {"Привет БД"}, {"unique"}}},
 
         {"password_hash", {"bytes[8]", {}, {}}},
 
