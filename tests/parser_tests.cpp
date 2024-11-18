@@ -83,7 +83,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
     };
     
-    auto create_values = parser.getCreateTableValues();
+    auto create_values = parser.getCreateTableParametrs();
 
     std::cout << std::endl;
     std::cout << "Expected values: " << std::endl;
@@ -134,7 +134,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
 
 
-    create_query = "create ordered index on users by login, id, admin";
+    create_query = "create ordered index\n on users by login, id, admin";
     std::cout << "Testing query: " << create_query << std::endl;
     QueryParser parser2(create_query);
     bool parse2_result = parser2.parse();
@@ -157,7 +157,7 @@ TEST(QueryParserTest, CreateParseTest) {
         {"admin", {IndexType::ORDERED}}
     };
     for (const auto& [key, value] : column_index_type_){
-        std::cout << "Column: " << key << "Type: ";
+        std::cout << "Column: " << key << " Type: ";
         switch (value) {
         case IndexType::ORDERED:
             std::cout << "ordered" << std::endl;
@@ -173,7 +173,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
     std::cout << std::endl;
     std::cout << "Parsed values:" << std::endl;
-    auto create2_values = parser2.getCreateIndexValues();
+    auto create2_values = parser2.getCreateIndexType();
     for (const auto& [key, value] : create2_values){
         std::cout << "Column: " << key << "Type: ";
         switch (value) {

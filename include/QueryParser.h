@@ -50,8 +50,8 @@ public:
     inline std::vector<std::string> getSelectedCol() const { return selected_columns_; }
     inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() const { return values_; }
     inline std::unordered_map<std::string, std::string> getInsertValues() const { return insert_values_; }
-    inline std::unordered_map<std::string, ColumnsParametrs> getCreateTableValues() const { return columns_parametrs_; };
-    inline std::unordered_map<std::string, IndexType> getCreateIndexValues() const { return column_index_type_; };
+    inline std::unordered_map<std::string, ColumnsParametrs> getCreateTableParametrs() const { return columns_parametrs_; };
+    inline std::unordered_map<std::string, IndexType> getCreateIndexType() const { return column_index_type_; };
 
 private:
     std::string str_;
