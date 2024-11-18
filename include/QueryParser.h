@@ -50,7 +50,8 @@ public:
     inline std::vector<std::string> getSelectedCol() const { return selected_columns_; }
     inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() const { return values_; }
     inline std::unordered_map<std::string, std::string> getInsertValues() const { return insert_values_; }
-    inline std::unordered_map<std::string, ColumnsParametrs> getCreateValues() const { return columns_parametrs_; };
+    inline std::unordered_map<std::string, ColumnsParametrs> getCreateTableValues() const { return columns_parametrs_; };
+    inline std::unordered_map<std::string, IndexType> getCreateIndexValues() const { return column_index_type_; };
 
 private:
     std::string str_;
@@ -63,8 +64,10 @@ private:
     std::unordered_map<std::string, std::string> insert_values_;
     std::unordered_map<std::string, std::string> update_values_;
     std::unordered_map<std::string, ColumnsParametrs> columns_parametrs_;
+    std::unordered_map<std::string, IndexType> column_index_type_;
     
     bool createTableParse();
+    bool createIndexParse();
     bool insertParse();
     bool selectParse();
     bool deleteParse();

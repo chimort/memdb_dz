@@ -83,7 +83,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
     };
     
-    auto create_values = parser.getCreateValues();
+    auto create_values = parser.getCreateTableValues();
 
     std::cout << std::endl;
     std::cout << "Expected values: " << std::endl;
@@ -130,4 +130,62 @@ TEST(QueryParserTest, CreateParseTest) {
         std::cout << std::endl;
     }
     std::cout << std::endl;
+
+
+
+
+    create_query = "create ordered index on users by login, id, admin";
+    std::cout << "Testing query: " << create_query << std::endl;
+    QueryParser parser2(create_query);
+    bool parse2_result = parser2.parse();
+
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "CREATE_INDEX" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse2_result);
+    EXPECT_EQ(parser2.getCommandName(), CommandType::CREATE_INDEX);    
+    EXPECT_EQ(parser2.getTableName(), "users");
+
+
+    std::cout << "Expected values:" << std::endl;
+    std::unordered_map<std::string, IndexType> column_index_type_ = {
+        {"login", {IndexType::ORDERED}},
+
+        {"id", {IndexType::ORDERED}},
+
+        {"admin", {IndexType::ORDERED}}
+    };
+    for (const auto& [key, value] : column_index_type_){
+        std::cout << "Column: " << key << "Type: ";
+        switch (value) {
+        case IndexType::ORDERED:
+            std::cout << "ordered" << std::endl;
+            break;
+        case IndexType::UNORDERED:
+            std::cout << "unordered" << std::endl;
+            break;
+        default:
+            std::cout << "unknown" << std::endl;
+            break;
+        }
+    }    
+
+    std::cout << std::endl;
+    std::cout << "Parsed values:" << std::endl;
+    auto create2_values = parser2.getCreateIndexValues();
+    for (const auto& [key, value] : create2_values){
+        std::cout << "Column: " << key << "Type: ";
+        switch (value) {
+        case IndexType::ORDERED:
+            std::cout << "ordered" << std::endl;
+            break;
+        case IndexType::UNORDERED:
+            std::cout << "unordered" << std::endl;
+            break;
+        default:
+            std::cout << "unknown" << std::endl;
+            break;
+        }
+    }
 }

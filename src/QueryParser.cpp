@@ -39,9 +39,14 @@ bool QueryParser::parse()
         command_type_ = CommandType::UPDATE;
         str_ = str_.substr(7); 
         updateParse();
-    } else if (str_.compare(0, 12, "create table") == 0) {
-        command_type_ = CommandType::CREATE_TABLE;
-        createTableParse();
+    } else if (str_.compare(0, 6, "create") == 0) {
+        if (str_.compare(0, 12, "create table") == 0){
+            command_type_ = CommandType::CREATE_TABLE;
+            createTableParse();
+        } else {
+            command_type_ = CommandType::CREATE_INDEX;
+            createIndexParse();
+        }
     } else {
         command_type_ = CommandType::UNKNOWN;
         return false;
@@ -70,6 +75,46 @@ std::vector<std::string> QueryParser::splitByComma(const std::string& str) {
     
     return result;
 }
+
+bool QueryParser::createIndexParse() {
+    std::smatch match;
+
+    std::regex index_regex(R"(^\s*create\s+(ordered|unordered)\s+index\s+on\s+(\w+)\s+by\s+([\w\s,]+)\s*$)", std::regex_constants::icase);
+
+    if (!std::regex_match(str_, match, index_regex)) {
+        throw std::invalid_argument("Invalid create index syntax");
+    }
+
+    // Извлекаем данные из строки
+    std::string index_type_str = match[1];  // Тип индекса
+    table_name_ = match[2];                 // Имя таблицы
+
+    // Определяем тип индекса
+    IndexType index_type;
+    if (index_type_str == "ordered") {
+        index_type = IndexType::ORDERED;
+    } else if (index_type_str == "unordered") {
+        index_type = IndexType::UNORDERED;
+    } else {
+        throw std::invalid_argument("Invalid index type");
+    }
+
+    // Разбор колонок
+    std::string columns_str = match[3];
+    std::regex column_split_regex(R"(\s*,\s*)");
+    std::sregex_token_iterator it(columns_str.begin(), columns_str.end(), column_split_regex, -1);
+    std::sregex_token_iterator end;
+
+    while (it != end) {
+        std::string column = *it++;
+        if (!column.empty()) {
+            column_index_type_[column] = index_type;
+        }
+    }
+
+    return true;
+}
+
 
 bool QueryParser::createTableParse() {
     std::smatch match;
