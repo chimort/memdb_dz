@@ -14,9 +14,11 @@ namespace memdb
 class Table{
 public:
 
-    Table(const std::vector<std::pair<std::string, config::ColumnType>>& columns) : schema_(columns) {
-        for (const auto& [column_name, _] : schema_) {
-            indices_[column_name] = {};
+    Table(const std::vector<config::ColumnSchema>& columns)
+        : schema_(columns) 
+    {
+        for (const auto& column : schema_) {
+            indices_[column.name] = {};
         }
     }
 
@@ -34,9 +36,9 @@ private:
     size_t makeHashKey(const config::ColumnValue& value) const;
 
     config::ColumnValue getDefaultValue(config::ColumnType column_type);
-    bool convertValue(const std::string& value_str, config::ColumnType expected_type, config::ColumnValue& out_value);
+    bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
 
-    std::vector<std::pair<std::string, config::ColumnType>> schema_;
+    std::vector<config::ColumnSchema> schema_;
     std::unordered_map<int, config::RowType> data_;
     std::unordered_map<std::string,
         std::unordered_multimap<std::size_t, int>> indices_;
