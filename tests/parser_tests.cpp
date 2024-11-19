@@ -66,10 +66,12 @@ TEST(QueryParserTest, CreateParseTest) {
     EXPECT_EQ(parser.getTableName(), "users");
     
 
-    std::vector<config::ColumnSchema> columns_parametrs_ = {{"id", config::ColumnType::INT, 0, {0, 1, 1}, "5000"},
+    std::vector<config::ColumnSchema> columns_parametrs_ = {
+        {"id", config::ColumnType::INT, 0, {0, 1, 1}, "5000"},
         {"login", config::ColumnType::STRING, 12, {1, 0, 0}, "Привет, БД."}, 
         {"password_hash", config::ColumnType::BITSTRING, 9, {0, 0, 0}, ""},
-        {"is_admin", config::ColumnType::BOOL, 0, {0, 0, 0}, "false"}};
+        {"is_admin", config::ColumnType::BOOL, 0, {0, 0, 0}, "false"}
+    };
 
     std::cout << std::endl;
     std::cout << "Expected values: " << std::endl;
@@ -165,7 +167,7 @@ TEST(QueryParserTest, CreateParseTest) {
     EXPECT_EQ(parser2.getCommandName(), CommandType::CREATE_INDEX);    
     EXPECT_EQ(parser2.getTableName(), "users");
 
-
+    std::cout << std::endl;
     std::cout << "Expected values:" << std::endl;
     std::unordered_map<std::string, IndexType> column_index_type_ = {
         {"login", {IndexType::ORDERED}},
@@ -174,6 +176,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
         {"admin", {IndexType::ORDERED}}
     };
+    
     for (const auto& [key, value] : column_index_type_){
         std::cout << "Column: " << key << " Type: ";
         switch (value) {
@@ -189,4 +192,22 @@ TEST(QueryParserTest, CreateParseTest) {
         }
     }    
 
+    auto reate_values = parser2.getCreateIndexType();
+    std::cout << std::endl;
+    std::cout << "Parsed Values" << std::endl;
+    for (const auto& [key, value] : column_index_type_){
+        std::cout << "Column: " << key << " Type: ";
+        switch (value) {
+        case IndexType::ORDERED:
+            std::cout << "ordered" << std::endl;
+            break;
+        case IndexType::UNORDERED:
+            std::cout << "unordered" << std::endl;
+            break;
+        default:
+            std::cout << "unknown" << std::endl;
+            break;
+        }
+    }  
+    
 }

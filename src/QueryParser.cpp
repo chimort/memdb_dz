@@ -108,7 +108,7 @@ bool QueryParser::createIndexParse() {
     while (it != end) {
         std::string column = *it++;
         if (!column.empty()) {
-            column_index_type_.push_back(index_type);
+            column_index_type_[column] = index_type;
         }
     }
 
@@ -244,9 +244,6 @@ bool QueryParser::selectParse()
         selected_columns_.push_back(token);
     }
 
-    for (auto i : selected_columns_) {
-        std::cout << i << std::endl;
-    }
 
     size_t where_pos = str_.find("where");
     if (where_pos == std::string::npos) {
@@ -266,9 +263,7 @@ bool QueryParser::deleteParse()
         return false;
     }
     table_name_ = str_.substr(0, where_pos - 1);
-    std::cout << table_name_ << std::endl;
     condition_ = str_.substr(where_pos + 6);
-    std::cout << condition_ << std::endl;
     return true;
 }
 
@@ -279,10 +274,8 @@ bool QueryParser::updateParse()
         return false;
     }
     table_name_ = str_.substr(0, set_pos - 1);
-    std::cout << table_name_ << std::endl;
     size_t where_pos = str_.find("where");
     std::string conditions_str = str_.substr(set_pos + 4, where_pos - set_pos - 5);
-    std::cout << conditions_str << std::endl;
 
     std::vector<std::string> tokens = splitByComma(conditions_str);
     for (const auto& token : tokens) {
@@ -291,7 +284,6 @@ bool QueryParser::updateParse()
     }
 
     condition_ = str_.substr(where_pos + 6);
-    std::cout << condition_ << std::endl;
     return true;
 }
 

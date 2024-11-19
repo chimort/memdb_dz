@@ -22,6 +22,8 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     config::RowType row;
     int id_value = -1;
 
+    std::vector<std::string> unique({""});
+
     for (const auto& [column_name, value_str] : insert_values) {
         auto schema_it = std::find_if(schema_.begin(), schema_.end(),
             [&column_name](const auto& col) { return col.name == column_name; });
@@ -29,6 +31,15 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
             return false; 
         }
         const config::ColumnSchema& column_schema = *schema_it;
+
+        if (column_schema.attributes[0] == 1){
+            for (auto& it : unique){
+                if (it == value_str){
+                    return false;
+                }
+            }
+            unique.push_back(value_str); // unique checker
+        }
 
         config::ColumnValue value;
         if (!convertValue(value_str, column_schema, value)) {
@@ -48,10 +59,24 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     for (const auto& column_schema : schema_) {
         const std::string& column_name = column_schema.name;
         if (row.find(column_name) == row.end()) {
-            row[column_name] = getDefaultValue(column_schema.type);
+            if (empty(column_schema.default_value)){
+                row[column_name] = getDefaultValue(column_schema.type); // Изменить на NULL
+            } else {
+                config::ColumnValue default_value;
+                if (!convertValue(column_schema.default_value, column_schema, default_value)){
+                    return false;
+                }
+                row[column_name] = default_value;
+            }
+
+            if (column_schema.attributes[1]){
+                auto it = data_[next_id_];
+                row[column_name] = std::get<int>(it[column_name]) + 1;
+            }
         }
     }
 
+    // Обновляем id
     int id;
     if (id_value == -1) {
         id = next_id_++;
@@ -83,6 +108,7 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     size_t num_values = insert_values.size();
     int id_value = -1;
 
+    std::vector<std::string> unique({""});
     for (size_t i = 0; i < num_values; ++i) {
         size_t schema_index = num_columns - num_values + i;
         const config::ColumnSchema& column_schema = schema_[schema_index];
@@ -91,6 +117,15 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         if (!convertValue(insert_values[i], column_schema, value)) {
             return false; 
         }
+
+        if (column_schema.attributes[0] == 1){
+            for (auto& it : unique){
+                if (insert_values[i] == it){
+                    return false;
+                }
+            } unique.push_back(insert_values[i]);
+        }
+
         row[column_name] = value;
 
         if (column_name == "id") {
@@ -105,8 +140,19 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     for (size_t i = 0; i < num_columns - num_values; ++i) {
         const config::ColumnSchema& column_schema = schema_[i];
         const std::string& column_name = column_schema.name;
-        if (row.find(column_name) == row.end()) {
-            row[column_name] = getDefaultValue(column_schema.type);
+        if (empty(column_schema.default_value)){
+            row[column_name] = getDefaultValue(column_schema.type); // Изменить на NULL
+        } else {
+            config::ColumnValue default_value;
+            if (!convertValue(column_schema.default_value, column_schema, default_value)){
+                return false;
+            }
+            row[column_name] = default_value;
+        }
+
+        if (column_schema.attributes[1]){
+            auto it = data_[next_id_];
+            row[column_name] = std::get<int>(it[column_name]) + 1;
         }
     }
 
