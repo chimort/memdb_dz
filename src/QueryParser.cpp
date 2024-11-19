@@ -108,7 +108,7 @@ bool QueryParser::createIndexParse() {
     while (it != end) {
         std::string column = *it++;
         if (!column.empty()) {
-            column_index_type_[column] = index_type;
+            column_index_type_.push_back(index_type);
         }
     }
 
@@ -119,6 +119,7 @@ bool QueryParser::createIndexParse() {
 bool QueryParser::createTableParse() {
     std::smatch match;
 
+    // Регулярное выражение для заголовка таблицы
     std::regex table_regex(R"(^\s*create\s+table\s+(\w+)\s*\(([\s\S]*)\)\s*$)", std::regex_constants::icase);
     if (!std::regex_match(str_, match, table_regex)) {
         throw std::invalid_argument("Invalid create table syntax");
@@ -128,13 +129,14 @@ bool QueryParser::createTableParse() {
     std::string columns_str = match[2]; // Строка с описанием колонок
 
     // Регулярное выражение для разбора колонок
-    std::regex column_regex(R"((?:\{\s*([^}]*)\s*\}\s*)?(\w+)\s*:\s*(\w+\[?\d*\]?)\s*(?:=\s*([^,]*))?)");
+    std::regex column_regex(R"((?:\{\s*([^}]*)\s*\}\s*)?(\w+)\s*:\s*(\w+)(\[\d+\])?\s*(?:=\s*(".*?"|[^,]*))?)");
 
     std::sregex_iterator it(columns_str.begin(), columns_str.end(), column_regex);
     std::sregex_iterator end;
 
     while (it != end) {
-        ColumnsParametrs params;
+        config::ColumnSchema params;
+        params.max_size = 0; // Явно обнуляем значение max_size для текущей колонки
 
         // Атрибуты (если есть)
         if ((*it)[1].matched) {
@@ -145,50 +147,59 @@ bool QueryParser::createTableParse() {
             while (attr_it != attr_end) {
                 std::string attribute = *attr_it++;
                 if (!attribute.empty()) {
-                    switch (attribute[0]) {
-                        case 'u':
-                            params.attributes[0] = 1;
-                            break;
-                        case 'a':
-                            params.attributes[1] = 1;
-                            break;
-                        default:
-                            params.attributes[2] = 1;
-                            break;
+                    if (attribute == "key") {
+                        params.attributes[2] = 1;
+                    } else if (attribute == "autoincrement") {
+                        params.attributes[1] = 1;
+                    } else if (attribute == "unique") {
+                        params.attributes[0] = 1;
                     }
                 }
             }
         }
 
-        // Имя, тип и значение по умолчанию
-        std::string name = (*it)[2];
+        // Имя, тип, размер массива и значение по умолчанию
+        params.name = (*it)[2];
         std::string type = (*it)[3];
+
+        // Определение типа
         if (type == "bool") {
-            params.type = ColumnType::BOOL;
+            params.type = config::ColumnType::BOOL;
+        } else if (type == "int32") {
+            params.type = config::ColumnType::INT;
+        } else if (type == "string") {
+            params.type = config::ColumnType::STRING;
+        } else if (type == "bytes") {
+            params.type = config::ColumnType::BITSTRING;
         } else {
-            switch (type[0]) {
-                case 'b':
-                    params.type = ColumnType::BITSTRING;
-                    break;
-                case 'i':
-                    params.type = ColumnType::INT;
-                    break;
-                default:
-                    params.type = ColumnType::STRING;
-                    break;
+            throw std::invalid_argument("Unknown column type: " + type);
+        }
+
+        // Проверка на наличие размера массива
+        if ((*it)[4].matched) {
+            std::string size_str = (*it)[4].str(); // Извлекаем строку вида "[32]"
+            size_str = size_str.substr(1, size_str.size() - 2); // Убираем скобки
+            params.max_size = std::stoi(size_str); // Конвертируем в число
+        }
+
+        // Значение по умолчанию (если есть)
+        if ((*it)[5].matched) {
+            params.default_value = (*it)[5].str();
+            // Удаляем кавычки, если значение обрамлено ими
+            if (!params.default_value.empty() && params.default_value.front() == '"' && params.default_value.back() == '"') {
+                params.default_value = params.default_value.substr(1, params.default_value.size() - 2);
             }
         }
 
-        if ((*it)[4].matched) {
-            params.default_value = (*it)[4];
-        }
 
-        columns_parametrs_[name] = params;
+        columns_parametrs_.push_back(params);
         ++it;
     }
 
     return true;
 }
+
+
 
 
 bool QueryParser::insertParse() {

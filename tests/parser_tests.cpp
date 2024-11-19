@@ -50,7 +50,7 @@ TEST(QueryParserTest, InsertParseTest) {
 }
 
 TEST(QueryParserTest, CreateParseTest) {
-    std::string create_query = "create table users ({key, autoincrement} id : int32 = 5000,\n {unique} login: string[32] = 'Привет БД', password_hash: bytes[8], is_admin : bool = false)";
+    std::string create_query = R"(create table users ({key, autoincrement} id : int32 = 5000,\n {unique} login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
     QueryParser parser(create_query);
     
     std::cout << "Testing query: " << create_query << std::endl;
@@ -65,68 +65,86 @@ TEST(QueryParserTest, CreateParseTest) {
     EXPECT_EQ(parser.getCommandName(), CommandType::CREATE_TABLE);    
     EXPECT_EQ(parser.getTableName(), "users");
     
-    struct Columns {
-        std::string type;
-        std::string default_value;
-        std::vector<std::string> attributes;
-    };
 
-    std::unordered_map<std::string, Columns> columns_parametrs_ = {
-
-        {"id", {"int", {"5000"}, {"key", "autoincrement"}}},
-
-        {"login", {"string[32]", {"Привет БД"}, {"unique"}}},
-
-        {"password_hash", {"bytes[8]", {}, {}}},
-
-        {"is_admin", {"bool", "false", {}}}
-
-    };
-    
-    auto create_values = parser.getCreateTableParametrs();
+    std::vector<config::ColumnSchema> columns_parametrs_ = {{"id", config::ColumnType::INT, 0, {0, 1, 1}, "5000"},
+        {"login", config::ColumnType::STRING, 12, {1, 0, 0}, "Привет, БД."}, 
+        {"password_hash", config::ColumnType::BITSTRING, 9, {0, 0, 0}, ""},
+        {"is_admin", config::ColumnType::BOOL, 0, {0, 0, 0}, "false"}};
 
     std::cout << std::endl;
     std::cout << "Expected values: " << std::endl;
-    for (const auto& [key, value] : columns_parametrs_) {
-        std::cout << "Key: " << key << " Type: " << value.type << " Default: " << value.default_value << " Attributes: ";
-        for (const auto& it : value.attributes){
-            std::cout << " " << it << " ";
+    for (const auto& it : columns_parametrs_) {
+        std::cout << "Key: " << it.name << " Type: ";
+        switch (it.type) {
+            case config::ColumnType::INT:
+                std::cout << "int";
+                break;
+            case config::ColumnType::STRING:
+                std::cout << "string";
+                break;
+            case config::ColumnType::BOOL:
+                std::cout << "bool";
+                break;
+            case config::ColumnType::BITSTRING:
+                std::cout << "bitstring";
+                break;
+            default:
+                std::cout << "Unknown";
         }
-        std::cout << std::endl;
+
+        std::cout << " Default: " << it.default_value << " Attributes: ";
+
+        if (it.attributes[0] == 1){
+            std::cout << "unique ";
+        }
+        if (it.attributes[1] == 1){
+            std::cout << "autoincrement ";
+        }
+        if (it.attributes[2] == 1){
+            std::cout << "key ";
+        }
+
+        std::cout << "Max Size:" << it.max_size;
+        std::cout << std::endl;       
     }
+    std::cout << std::endl;
+
+    auto create_values = parser.getCreateTableParametrs();
 
     std::cout << std::endl;
     std::cout << "Parsed values: " << std::endl;
-    for (const auto& [key, value] : create_values) {
-        std::cout << "Key: " << key << " Type: ";
-        switch (value.type) {
-            case ColumnType::INT:
+    for (const auto& it : create_values) {
+        std::cout << "Key: " << it.name << " Type: ";
+        switch (it.type) {
+            case config::ColumnType::INT:
                 std::cout << "int";
                 break;
-            case ColumnType::STRING:
+            case config::ColumnType::STRING:
                 std::cout << "string";
                 break;
-            case ColumnType::BOOL:
+            case config::ColumnType::BOOL:
                 std::cout << "bool";
                 break;
-            case ColumnType::BITSTRING:
+            case config::ColumnType::BITSTRING:
                 std::cout << "bitstring";
                 break;
             default:
                 std::cout << "Unknown";
         }
         
-        std::cout << " Default: " << value.default_value << " Attributes: ";
+        std::cout << " Default: " << it.default_value << " Attributes: ";
 
-        if (value.attributes[0] == 1){
+        if (it.attributes[0] == 1){
             std::cout << "unique ";
         }
-        if (value.attributes[1] == 1){
+        if (it.attributes[1] == 1){
             std::cout << "autoincrement ";
         }
-        if (value.attributes[2] == 1){
+        if (it.attributes[2] == 1){
             std::cout << "key ";
         }
+
+        std::cout << "Max Size:" << it.max_size;
         std::cout << std::endl;
     }
     std::cout << std::endl;
@@ -171,21 +189,4 @@ TEST(QueryParserTest, CreateParseTest) {
         }
     }    
 
-    std::cout << std::endl;
-    std::cout << "Parsed values:" << std::endl;
-    auto create2_values = parser2.getCreateIndexType();
-    for (const auto& [key, value] : create2_values){
-        std::cout << "Column: " << key << "Type: ";
-        switch (value) {
-        case IndexType::ORDERED:
-            std::cout << "ordered" << std::endl;
-            break;
-        case IndexType::UNORDERED:
-            std::cout << "unordered" << std::endl;
-            break;
-        default:
-            std::cout << "unknown" << std::endl;
-            break;
-        }
-    }
 }
