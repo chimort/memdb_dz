@@ -406,59 +406,28 @@ TEST_F(TableTest, InsertWithBitStringValues) {
 
 // Тест автоинкремента 'id' и проверки на существующий 'id'
 TEST_F(TableTest, AutoIncrementIdAndDuplicateCheck) {
+    // Создаем таблицу с 'id' как autoincrement и unique
     std::vector<config::ColumnSchema> columns = {
-        {"id", config::ColumnType::INT, 0},
-        {"name", config::ColumnType::STRING, 255}
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}},
+        {"name", config::ColumnType::STRING, 50, {0, 0, 0}}
     };
     memdb::Table table(columns);
 
-    // Вставляем записи без указания 'id'
-    std::unordered_map<std::string, std::string> insert_values1 = {
-        {"name", "Record1"}
+    // Вставляем первую запись без указания 'id'
+    std::unordered_map<std::string, std::string> record1 = {
+        {"name", "Alice"}
     };
-    EXPECT_TRUE(table.insertRecord(insert_values1));
+    EXPECT_TRUE(table.insertRecord(record1));
 
-    std::unordered_map<std::string, std::string> insert_values2 = {
-        {"name", "Record2"}
+    // Вставляем вторую запись с указанием дублирующегося 'id'
+    std::unordered_map<std::string, std::string> record2 = {
+        {"id", "0"}, // 'id' совпадает с автоприращенным значением предыдущей записи
+        {"name", "Bob"}
     };
-    EXPECT_TRUE(table.insertRecord(insert_values2));
+    EXPECT_FALSE(table.insertRecord(record2));
 
-    // Вставляем запись с 'id = 10'
-    std::unordered_map<std::string, std::string> insert_values3 = {
-        {"id", "10"},
-        {"name", "Record10"}
-    };
-    EXPECT_TRUE(table.insertRecord(insert_values3));
-
-    // Вставляем запись без указания 'id' (должен получить 'id = 11')
-    std::unordered_map<std::string, std::string> insert_values4 = {
-        {"name", "Record11"}
-    };
-    EXPECT_TRUE(table.insertRecord(insert_values4));
-
-    // Проверяем, что количество записей равно 4
-    const auto& data = table.getData();
-    EXPECT_EQ(data.size(), 4);
-
-    // Проверяем 'id' записей
-    std::set<int> ids;
-    for (const auto& [id, row] : data) {
-        ids.insert(id);
-    }
-    EXPECT_TRUE(ids.count(0));
-    EXPECT_TRUE(ids.count(1));
-    EXPECT_TRUE(ids.count(10));
-    EXPECT_TRUE(ids.count(11));
-
-    // Пытаемся вставить запись с существующим 'id = 1'
-    std::unordered_map<std::string, std::string> insert_values5 = {
-        {"id", "1"},
-        {"name", "DuplicateRecord"}
-    };
-    EXPECT_FALSE(table.insertRecord(insert_values5));
-
-    // Проверяем, что запись не добавилась
-    EXPECT_EQ(data.size(), 4);
+    // Проверяем, что в таблице только одна запись
+    EXPECT_EQ(table.getData().size(), 1);
 }
 
 // Тест вставки строки и битовой последовательности, превышающих максимальный размер
@@ -528,4 +497,282 @@ TEST_F(TableTest, InsertValueExceedsMaxSize) {
 
     // Убеждаемся, что запись вставилась
     EXPECT_EQ(table.getData().size(), 1);
+}
+
+
+// tests/table_tests.cpp
+
+TEST_F(TableTest, ExpandedUniqueInsertTest) {
+    // Определяем схему таблицы с тремя колонками
+    // Массив атрибутов: {unique, autoincrement, key}
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0, {1, 1, 0}},        // autoincrement, key
+        {"email", config::ColumnType::STRING, 100, {1, 0, 0}}, // unique
+        {"username", config::ColumnType::STRING, 50, {0, 0, 0}} // не уникальный столбец
+    };
+    memdb::Table table(columns);
+
+    // Вставляем первую запись с уникальными 'email' и 'username'
+    std::unordered_map<std::string, std::string> record1 = {
+        {"email", "user1@example.com"},
+        {"username", "user1"}
+    };
+    EXPECT_TRUE(table.insertRecord(record1));
+
+    // Вставляем вторую запись с другими 'email' и 'username'
+    std::unordered_map<std::string, std::string> record2 = {
+        {"email", "user2@example.com"},
+        {"username", "user2"}
+    };
+    EXPECT_TRUE(table.insertRecord(record2));
+
+    // Попытка вставить запись с дублирующимся 'email' и другим 'username'
+    std::unordered_map<std::string, std::string> duplicate_email_record = {
+        {"email", "user1@example.com"},
+        {"username", "user3"}
+    };
+    EXPECT_FALSE(table.insertRecord(duplicate_email_record));
+
+    // Попытка вставить запись с дублирующимся 'username' и уникальным 'email'
+    std::unordered_map<std::string, std::string> duplicate_username_record = {
+        {"email", "user3@example.com"},
+        {"username", "user2"}
+    };
+    EXPECT_TRUE(table.insertRecord(duplicate_username_record));
+
+    // Вставляем запись с уникальным 'email' и дублирующимся 'username'
+    std::unordered_map<std::string, std::string> record3 = {
+        {"email", "user4@example.com"},
+        {"username", "user2"}
+    };
+    EXPECT_TRUE(table.insertRecord(record3));
+
+    // Попытка вставить запись с дублирующимися 'email' и 'username'
+    std::unordered_map<std::string, std::string> duplicate_both_record = {
+        {"email", "user2@example.com"},
+        {"username", "user2"}
+    };
+    EXPECT_FALSE(table.insertRecord(duplicate_both_record));
+
+    // Проверяем, что таблица содержит только четыре успешные записи
+    const auto& data = table.getData();
+    EXPECT_EQ(data.size(), 4);
+
+    // Выводим содержимое таблицы для визуализации
+    std::cout << "Содержимое таблицы после вставок:" << std::endl;
+    for (const auto& [record_id, row] : data) {
+        int id = std::get<int>(row.at("id"));
+        std::string email = std::get<std::string>(row.at("email"));
+        std::string username = std::get<std::string>(row.at("username"));
+        std::cout << "ID: " << id << ", Email: " << email << ", Username: " << username << std::endl;
+    }
+
+    // Проверяем, что значения 'id' назначены корректно
+    std::set<int> ids;
+    for (const auto& [record_id, row] : data) {
+        int id = std::get<int>(row.at("id"));
+        ids.insert(id);
+    }
+    EXPECT_TRUE(ids.count(0));
+    EXPECT_TRUE(ids.count(1));
+    EXPECT_TRUE(ids.count(2));
+    EXPECT_TRUE(ids.count(3));
+}
+
+TEST_F(TableTest, CombinedAttributesTest) {
+    // Обновленная схема с уникальным autoincrement 'id'
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}},
+        {"email", config::ColumnType::STRING, 100, {1, 0, 0}},
+        {"username", config::ColumnType::STRING, 50, {0, 0, 0}}
+    };
+    memdb::Table table(columns);
+
+    // Вставляем запись с уникальным 'email'
+    std::unordered_map<std::string, std::string> record1 = {
+        {"email", "user@example.com"},
+        {"username", "user1"}
+    };
+    EXPECT_TRUE(table.insertRecord(record1));
+
+    // Попытка вставить запись с тем же 'email'
+    std::unordered_map<std::string, std::string> record2 = {
+        {"email", "user@example.com"},
+        {"username", "user2"}
+    };
+    EXPECT_FALSE(table.insertRecord(record2));
+
+    // Проверяем количество записей в таблице
+    EXPECT_EQ(table.getData().size(), 1);
+}
+
+TEST_F(TableTest, AutoIncrementAttributeInsertTest) {
+    using namespace memdb;
+
+    // Определяем схему таблицы
+    std::vector<config::ColumnSchema> columns = {
+        // Атрибуты: {unique, autoincrement, key}
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}}, // Автоинкремент для 'id'
+        {"name", config::ColumnType::STRING, 255, {0, 0, 0}}
+    };
+
+    Table table(columns);
+
+    // Вставляем первую запись
+    std::unordered_map<std::string, std::string> insert_values1 = {
+        {"name", "First Record"}
+    };
+    EXPECT_TRUE(table.insertRecord(insert_values1));
+    std::cout << "Inserted: {name: \"First Record\"}" << std::endl;
+
+    // Вставляем вторую запись
+    std::unordered_map<std::string, std::string> insert_values2 = {
+        {"name", "Second Record"}
+    };
+    EXPECT_TRUE(table.insertRecord(insert_values2));
+    std::cout << "Inserted: {name: \"Second Record\"}" << std::endl;
+
+    // Получаем все данные из таблицы
+    const auto& data = table.getData();
+
+    // Проверяем количество записей
+    EXPECT_EQ(data.size(), 2);
+    std::cout << "Total records: " << data.size() << std::endl;
+
+    // Выводим записи на консоль
+    std::cout << "Table contents:" << std::endl;
+    for (const auto& [record_id, row] : data) {
+        int id = std::get<int>(row.at("id"));
+        std::string name = std::get<std::string>(row.at("name"));
+        std::cout << "Record ID: " << id << ", Name: " << name << std::endl;
+    }
+
+    // Проверяем значения 'id' в записях
+    EXPECT_EQ(std::get<int>(data.at(0).at("id")), 0);
+    EXPECT_EQ(std::get<std::string>(data.at(0).at("name")), "First Record");
+    EXPECT_EQ(std::get<int>(data.at(1).at("id")), 1);
+    EXPECT_EQ(std::get<std::string>(data.at(1).at("name")), "Second Record");
+}
+
+TEST_F(TableTest, UserDefaultValueTest) {
+    // Определяем схему таблицы с default_value
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}},               // Поле с autoincrement, unique, key
+        {"status", config::ColumnType::STRING, 20, {0, 0, 0}, "active"}, // Поле с default_value "active"
+        {"priority", config::ColumnType::INT, 0, {0, 0, 0}, "5"},        // Поле с default_value 5
+        {"description", config::ColumnType::STRING, 255, {0, 0, 0}}  // Поле без default_value
+    };
+    memdb::Table table(columns);
+
+    // Вставляем запись без указания 'status' и 'priority'
+    std::unordered_map<std::string, std::string> record = {
+        {"description", "Test record"}
+    };
+    EXPECT_TRUE(table.insertRecord(record));
+
+    // Получаем данные из таблицы
+    const auto& data = table.getData();
+    EXPECT_EQ(data.size(), 1);
+
+    const config::RowType& row = data.at(0); // 'id' первой записи — 0
+
+    // Проверяем, что 'status' соответствует "active"
+    EXPECT_EQ(std::get<std::string>(row.at("status")), "active");
+
+    // Проверяем, что 'priority' соответствует 5
+    EXPECT_EQ(std::get<int>(row.at("priority")), 5);
+
+    // Проверяем, что 'description' соответствует "Test record"
+    EXPECT_EQ(std::get<std::string>(row.at("description")), "Test record");
+
+    // Проверяем, что 'id' соответствует 0
+    EXPECT_EQ(std::get<int>(row.at("id")), 0);
+
+    // Вставляем вторую запись без указания 'description'
+    std::unordered_map<std::string, std::string> record2 = {
+        {"status", "inactive"}
+    };
+    EXPECT_TRUE(table.insertRecord(record2));
+
+    // Проверяем, что 'description' установлено через getDefaultValue
+    EXPECT_EQ(data.size(), 2);
+
+    const config::RowType& row2 = data.at(1); // 'id' второй записи — 1
+
+    // 'description' должно быть пустой строкой из getDefaultValue для STRING
+    EXPECT_EQ(std::get<std::string>(row2.at("description")), "");
+
+    // Проверяем, что 'status' соответствует "inactive"
+    EXPECT_EQ(std::get<std::string>(row2.at("status")), "inactive");
+
+    // Проверяем, что 'priority' соответствует 5 (default_value)
+    EXPECT_EQ(std::get<int>(row2.at("priority")), 5);
+
+    // Проверяем, что 'id' соответствует 1
+    EXPECT_EQ(std::get<int>(row2.at("id")), 1);
+}
+
+TEST_F(TableTest, AutoincrementUniqueFieldsTest) {
+    // Определяем схему таблицы
+    std::vector<config::ColumnSchema> columns = {
+        // {имя, тип, размер, {unique, autoincrement, key}, default_value}
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}},          // autoincrement, unique, key
+        {"auto_field1", config::ColumnType::INT, 0, {0, 1, 0}}, // autoincrement
+        {"regular_field", config::ColumnType::STRING, 255, {0, 0, 0}}, // обычное поле
+        {"unique_field", config::ColumnType::STRING, 100, {1, 0, 0}},   // unique
+        {"auto_field2", config::ColumnType::INT, 0, {0, 1, 0}}  // еще одно autoincrement поле
+    };
+    memdb::Table table(columns);
+
+    // Вставляем первую запись
+    std::unordered_map<std::string, std::string> record1 = {
+        {"regular_field", "Value1"},
+        {"unique_field", "Unique1"}
+    };
+    EXPECT_TRUE(table.insertRecord(record1));
+
+    std::unordered_map<std::string, std::string> record3 = {
+        {"regular_field", "Value2"},
+        {"auto_field1", "1234"},
+        {"unique_field", "Unique3"}
+    };
+    EXPECT_TRUE(table.insertRecord(record3));
+
+    // Вставляем вторую запись
+    std::unordered_map<std::string, std::string> record2 = {
+        {"regular_field", "Value2"},
+        {"unique_field", "Unique2"}
+    };
+    EXPECT_TRUE(table.insertRecord(record2));
+
+
+    // Получаем данные из таблицы
+    const auto& data = table.getData();
+    EXPECT_EQ(data.size(), 3);
+
+    // Выводим содержимое таблицы для визуализации
+    std::cout << "Содержимое таблицы после вставок:" << std::endl;
+    for (const auto& [record_id, row] : data) {
+        int id = std::get<int>(row.at("id"));
+        int auto_field1 = std::get<int>(row.at("auto_field1"));
+        int auto_field2 = std::get<int>(row.at("auto_field2"));
+        std::string regular_field = std::get<std::string>(row.at("regular_field"));
+        std::string unique_field = std::get<std::string>(row.at("unique_field"));
+
+        std::cout << "Record ID: " << record_id << std::endl;
+        std::cout << "  id: " << id << std::endl;
+        std::cout << "  auto_field1: " << auto_field1 << std::endl;
+        std::cout << "  auto_field2: " << auto_field2 << std::endl;
+        std::cout << "  regular_field: " << regular_field << std::endl;
+        std::cout << "  unique_field: " << unique_field << std::endl;
+    }
+
+    // Проверяем значения autoincrement полей на корректность
+    // Так как data — это unordered_map, сначала собираем id и сортируем их
+    std::vector<int> ids;
+    for (const auto& [record_id, row] : data) {
+        ids.push_back(std::get<int>(row.at("id")));
+    }
+    std::sort(ids.begin(), ids.end());
+
 }

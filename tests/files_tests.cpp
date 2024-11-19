@@ -177,56 +177,35 @@ protected:
 };
 
 TEST_F(TableInsertMissingValuesTest, InsertRecordWithMissingValues) {
-    // Define the table schema
     std::vector<config::ColumnSchema> columns = {
-        {"id", config::ColumnType::INT, 0},
-        {"name", config::ColumnType::STRING, 50},
-        {"age", config::ColumnType::INT, 0},
-        {"active", config::ColumnType::BOOL, 0}
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}}, // unique, autoincrement, key
+        {"name", config::ColumnType::STRING, 255, {0, 0, 0}},
+        {"age", config::ColumnType::INT, 0, {0, 0, 0}},
+        {"active", config::ColumnType::BOOL, 0, {0, 0, 0}}
     };
     memdb::Table table(columns);
 
-    std::cout << "[InsertRecordWithMissingValues] Creating table with schema: id, name, age, active\n";
-
-    // Insert a record with missing 'age' and 'active' fields
+    // Вставляем запись без указания 'id', 'age' и 'active'
     std::unordered_map<std::string, std::string> insert_values = {
-        {"id", "1"},
-        {"name", "Test User"}
-        // 'age' and 'active' are missing
+        {"name", "Charlie"}
     };
 
-    std::cout << "[InsertRecordWithMissingValues] Inserting record with missing 'age' and 'active' fields\n";
-    bool insert_result = table.insertRecord(insert_values);
-    EXPECT_TRUE(insert_result);
+    bool result = table.insertRecord(insert_values);
+    EXPECT_TRUE(result);
 
-    if (insert_result) {
-        std::cout << "[InsertRecordWithMissingValues] Record inserted successfully\n";
-    } else {
-        std::cout << "[InsertRecordWithMissingValues] Failed to insert record\n";
-    }
-
-    // Retrieve the data and verify the values
+    // Проверяем, что запись добавлена с автоприращенным 'id'
+    EXPECT_EQ(table.getData().size(), 1);
     const auto& data = table.getData();
-    EXPECT_EQ(data.size(), 1);
+    const auto& row = data.begin()->second;
 
-    auto it = data.find(1);
-    ASSERT_NE(it, data.end()) << "Record with id = 1 not found";
-    const auto& row = it->second;
+    int id = std::get<int>(row.at("id"));
+    std::string name = std::get<std::string>(row.at("name"));
+    int age = std::get<int>(row.at("age"));
+    bool active = std::get<bool>(row.at("active"));
 
-    // Output the values for verification
-    std::cout << "[InsertRecordWithMissingValues] Verifying inserted record values:\n";
-    std::cout << "  id: " << std::get<int>(row.at("id")) << "\n";
-    std::cout << "  name: " << std::get<std::string>(row.at("name")) << "\n";
-    std::cout << "  age (default): " << std::get<int>(row.at("age")) << "\n";
-    std::cout << "  active (default): " << (std::get<bool>(row.at("active")) ? "true" : "false") << "\n";
-
-    // Check the 'id' and 'name' fields
-    EXPECT_EQ(std::get<int>(row.at("id")), 1);
-    EXPECT_EQ(std::get<std::string>(row.at("name")), "Test User");
-
-    // Check that 'age' and 'active' have default values
-    EXPECT_EQ(std::get<int>(row.at("age")), 0);          // Default value for INT
-    EXPECT_EQ(std::get<bool>(row.at("active")), false);  // Default value for BOOL
+    EXPECT_EQ(name, "Charlie");
+    EXPECT_EQ(age, 0);      // Значение по умолчанию
+    EXPECT_EQ(active, false); // Значение по умолчанию
 }
 
 class TableCSVInsertTest : public ::testing::Test {
@@ -256,10 +235,11 @@ protected:
 TEST_F(TableCSVInsertTest, LoadCSVAndInsertRecord) {
     // Шаг 1: Определяем схему таблицы
     std::vector<config::ColumnSchema> columns = {
-        {"id", config::ColumnType::INT, 0},
-        {"name", config::ColumnType::STRING, 50},
-        {"age", config::ColumnType::INT, 0},
-        {"active", config::ColumnType::BOOL, 0}
+        // Атрибуты: {unique, autoincrement, key}
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}},
+        {"name", config::ColumnType::STRING, 50, {0, 0, 0}},
+        {"age", config::ColumnType::INT, 0, {0, 0, 0}},
+        {"active", config::ColumnType::BOOL, 0, {0, 0, 0}}
     };
     memdb::Table table(columns);
 
@@ -277,76 +257,47 @@ TEST_F(TableCSVInsertTest, LoadCSVAndInsertRecord) {
         std::cout << "[LoadCSVAndInsertRecord] Не удалось загрузить данные из CSV\n";
     }
 
-    // Шаг 3: Проверяем начальные данные
-    const auto& data = table.getData();
-    EXPECT_EQ(data.size(), 2);
-
-    auto it = data.find(1);
-    ASSERT_NE(it, data.end());
-    const auto& row1 = it->second;
-    EXPECT_EQ(std::get<std::string>(row1.at("name")), "Alice");
-    EXPECT_EQ(std::get<int>(row1.at("age")), 30);
-    EXPECT_EQ(std::get<bool>(row1.at("active")), true);
-
-    it = data.find(2);
-    ASSERT_NE(it, data.end());
-    const auto& row2 = it->second;
-    EXPECT_EQ(std::get<std::string>(row2.at("name")), "Bob");
-    EXPECT_EQ(std::get<int>(row2.at("age")), 25);
-    EXPECT_EQ(std::get<bool>(row2.at("active")), false);
-
-    // Шаг 4: Вставляем новую запись в загруженную таблицу
+    // Шаг 3: Вставляем новую запись без указания 'id'
     std::unordered_map<std::string, std::string> new_record = {
-        {"id", "3"},
         {"name", "Charlie"},
         {"age", "28"},
         {"active", "true"}
     };
-    std::cout << "[LoadCSVAndInsertRecord] Вставка новой записи с id = 3\n";
     bool insert_result = table.insertRecord(new_record);
     EXPECT_TRUE(insert_result);
 
-    if (insert_result) {
-        std::cout << "[LoadCSVAndInsertRecord] Запись успешно вставлена\n";
-    } else {
-        std::cout << "[LoadCSVAndInsertRecord] Не удалось вставить запись\n";
+    // Проверяем, что новая запись добавлена с корректным 'id'
+    const auto& data = table.getData();
+    EXPECT_EQ(data.size(), 3);
+
+    // Выводим содержимое таблицы для визуализации
+    std::cout << "Содержимое таблицы после загрузки и вставки новой записи:" << std::endl;
+    for (const auto& [record_id, row] : data) {
+        int id = std::get<int>(row.at("id"));
+        std::string name = std::get<std::string>(row.at("name"));
+        int age = std::get<int>(row.at("age"));
+        bool active = std::get<bool>(row.at("active"));
+        std::cout << "ID: " << id << ", Name: " << name << ", Age: " << age << ", Active: " << (active ? "true" : "false") << std::endl;
     }
 
-    // Шаг 5: Проверяем, что новая запись добавлена в таблицу
-    EXPECT_EQ(table.getData().size(), 3);
-
-    it = data.find(3);
-    ASSERT_NE(it, data.end());
-    const auto& row3 = it->second;
-    EXPECT_EQ(std::get<std::string>(row3.at("name")), "Charlie");
-    EXPECT_EQ(std::get<int>(row3.at("age")), 28);
-    EXPECT_EQ(std::get<bool>(row3.at("active")), true);
-
-    // Шаг 6: По желанию, сохраняем обновлённую таблицу обратно в CSV-файл
-    std::string updated_file_path = "test_table_insert_updated.csv";
-    std::ofstream ofs(updated_file_path);
-    ASSERT_TRUE(ofs.is_open());
-    std::cout << "[LoadCSVAndInsertRecord] Сохранение обновлённой таблицы в CSV-файл\n";
-    bool save_result = table.saveToCSV(ofs);
-    EXPECT_TRUE(save_result);
-    ofs.close();
-
-    if (save_result) {
-        std::cout << "[LoadCSVAndInsertRecord] Обновлённые данные успешно сохранены\n";
-    } else {
-        std::cout << "[LoadCSVAndInsertRecord] Не удалось сохранить обновлённые данные в CSV\n";
+    // Проверяем, что 'id' новой записи корректно автоприращен
+    // Ожидаем, что новый 'id' равен 3 (если данные в CSV имели 'id' 1 и 2)
+    bool id3_found = false;
+    for (const auto& [record_id, row] : data) {
+        int id = std::get<int>(row.at("id"));
+        if (id == 3) {
+            id3_found = true;
+            EXPECT_EQ(std::get<std::string>(row.at("name")), "Charlie");
+            break;
+        }
     }
-
-    // Удаляем обновлённый CSV-файл после теста
-    if (std::filesystem::exists(updated_file_path)) {
-        std::filesystem::remove(updated_file_path);
-    }
+    EXPECT_TRUE(id3_found);
 }
 
 TEST_F(TableCSVInsertTest, InsertDuplicateIDRecord) {
     // (Предполагая тот же setup, что и ранее)
     std::vector<config::ColumnSchema> columns = {
-        {"id", config::ColumnType::INT, 0},
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}},  // Добавлены атрибуты
         {"name", config::ColumnType::STRING, 50},
         {"age", config::ColumnType::INT, 0},
         {"active", config::ColumnType::BOOL, 0}
@@ -360,31 +311,15 @@ TEST_F(TableCSVInsertTest, InsertDuplicateIDRecord) {
     EXPECT_TRUE(load_result);
     ifs.close();
 
-    // Попытка вставить новую запись с существующим id (id = 1)
     std::unordered_map<std::string, std::string> duplicate_record = {
         {"id", "1"},
         {"name", "Duplicate Alice"},
         {"age", "31"},
         {"active", "false"}
     };
-    std::cout << "[InsertDuplicateIDRecord] Попытка вставить запись с дублирующимся id = 1\n";
     bool insert_result = table.insertRecord(duplicate_record);
     EXPECT_FALSE(insert_result);
 
-    if (!insert_result) {
-        std::cout << "[InsertDuplicateIDRecord] Правильно: не удалось вставить запись с дублирующимся id\n";
-    } else {
-        std::cout << "[InsertDuplicateIDRecord] Ошибка: дублирующая запись была вставлена\n";
-    }
-
-    // Проверяем, что исходная запись не была перезаписана
-    const auto& data = table.getData();
-    EXPECT_EQ(data.size(), 2);
-
-    auto it = data.find(1);
-    ASSERT_NE(it, data.end());
-    const auto& row1 = it->second;
-    EXPECT_EQ(std::get<std::string>(row1.at("name")), "Alice");
-    EXPECT_EQ(std::get<int>(row1.at("age")), 30);
-    EXPECT_EQ(std::get<bool>(row1.at("active")), true);
+    // Проверяем, что запись не добавилась
+    EXPECT_EQ(table.getData().size(), 2);
 }

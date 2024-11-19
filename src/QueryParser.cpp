@@ -4,6 +4,7 @@
 #include <cctype>
 #include <sstream>
 #include <string>
+#include <regex>
 
 #include <iostream>
 
@@ -38,17 +39,20 @@ bool QueryParser::parse()
         command_type_ = CommandType::UPDATE;
         str_ = str_.substr(7); 
         updateParse();
+    } else if (str_.compare(0, 6, "create") == 0) {
+        if (str_.compare(0, 12, "create table") == 0){
+            command_type_ = CommandType::CREATE_TABLE;
+            createTableParse();
+        } else {
+            command_type_ = CommandType::CREATE_INDEX;
+            createIndexParse();
+        }
     } else {
         command_type_ = CommandType::UNKNOWN;
         return false;
     }
 
     return true;
-}
-
-bool QueryParser::createTableParse()
-{
-    return false;
 }
 
 
@@ -71,6 +75,132 @@ std::vector<std::string> QueryParser::splitByComma(const std::string& str) {
     
     return result;
 }
+
+bool QueryParser::createIndexParse() {
+    std::smatch match;
+
+    std::regex index_regex(R"(^\s*create\s+(ordered|unordered)\s+index\s+on\s+(\w+)\s+by\s+([\w\s,]+)\s*$)", std::regex_constants::icase);
+
+    if (!std::regex_match(str_, match, index_regex)) {
+        throw std::invalid_argument("Invalid create index syntax");
+    }
+
+    // Извлекаем данные из строки
+    std::string index_type_str = match[1];  // Тип индекса
+    table_name_ = match[2];                 // Имя таблицы
+
+    // Определяем тип индекса
+    IndexType index_type;
+    if (index_type_str == "ordered") {
+        index_type = IndexType::ORDERED;
+    } else if (index_type_str == "unordered") {
+        index_type = IndexType::UNORDERED;
+    } else {
+        throw std::invalid_argument("Invalid index type");
+    }
+
+    // Разбор колонок
+    std::string columns_str = match[3];
+    std::regex column_split_regex(R"(\s*,\s*)");
+    std::sregex_token_iterator it(columns_str.begin(), columns_str.end(), column_split_regex, -1);
+    std::sregex_token_iterator end;
+
+    while (it != end) {
+        std::string column = *it++;
+        if (!column.empty()) {
+            column_index_type_[column] = index_type;
+        }
+    }
+
+    return true;
+}
+
+
+bool QueryParser::createTableParse() {
+    std::smatch match;
+
+    // Регулярное выражение для заголовка таблицы
+    std::regex table_regex(R"(^\s*create\s+table\s+(\w+)\s*\(([\s\S]*)\)\s*$)", std::regex_constants::icase);
+    if (!std::regex_match(str_, match, table_regex)) {
+        throw std::invalid_argument("Invalid create table syntax");
+    }
+
+    table_name_ = match[1]; // Имя таблицы
+    std::string columns_str = match[2]; // Строка с описанием колонок
+
+    // Регулярное выражение для разбора колонок
+    std::regex column_regex(R"((?:\{\s*([^}]*)\s*\}\s*)?(\w+)\s*:\s*(\w+)(\[\d+\])?\s*(?:=\s*(".*?"|[^,]*))?)");
+
+    std::sregex_iterator it(columns_str.begin(), columns_str.end(), column_regex);
+    std::sregex_iterator end;
+
+    while (it != end) {
+        config::ColumnSchema params;
+        params.max_size = 0; // Явно обнуляем значение max_size для текущей колонки
+
+        // Атрибуты (если есть)
+        if ((*it)[1].matched) {
+            std::string attributes = (*it)[1];
+            std::regex attr_split_regex(R"(\s*,\s*)");
+            std::sregex_token_iterator attr_it(attributes.begin(), attributes.end(), attr_split_regex, -1);
+            std::sregex_token_iterator attr_end;
+            while (attr_it != attr_end) {
+                std::string attribute = *attr_it++;
+                if (!attribute.empty()) {
+                    if (attribute == "key") {
+                        params.attributes[2] = 1;
+                    } else if (attribute == "autoincrement") {
+                        params.attributes[1] = 1;
+                    } else if (attribute == "unique") {
+                        params.attributes[0] = 1;
+                    }
+                }
+            }
+        }
+
+        // Имя, тип, размер массива и значение по умолчанию
+        params.name = (*it)[2];
+        std::string type = (*it)[3];
+
+        // Определение типа
+        if (type == "bool") {
+            params.type = config::ColumnType::BOOL;
+        } else if (type == "int32") {
+            params.type = config::ColumnType::INT;
+        } else if (type == "string") {
+            params.type = config::ColumnType::STRING;
+        } else if (type == "bytes") {
+            params.type = config::ColumnType::BITSTRING;
+        } else {
+            throw std::invalid_argument("Unknown column type: " + type);
+        }
+
+        // Проверка на наличие размера массива
+        if ((*it)[4].matched) {
+            std::string size_str = (*it)[4].str(); // Извлекаем строку вида "[32]"
+            size_str = size_str.substr(1, size_str.size() - 2); // Убираем скобки
+            params.max_size = std::stoi(size_str); // Конвертируем в число
+        }
+
+        // Значение по умолчанию (если есть)
+        if ((*it)[5].matched) {
+            params.default_value = (*it)[5].str();
+            // Удаляем кавычки, если значение обрамлено ими
+            if (!params.default_value.empty() && params.default_value.front() == '"' && params.default_value.back() == '"') {
+                params.default_value = params.default_value.substr(1, params.default_value.size() - 2);
+            }
+        }
+
+
+        columns_parametrs_.push_back(params);
+        ++it;
+    }
+
+    return true;
+}
+
+
+
 
 bool QueryParser::insertParse() {
     size_t open_paren_pos = str_.find('(');
@@ -114,9 +244,6 @@ bool QueryParser::selectParse()
         selected_columns_.push_back(token);
     }
 
-    for (auto i : selected_columns_) {
-        std::cout << i << std::endl;
-    }
 
     size_t where_pos = str_.find("where");
     if (where_pos == std::string::npos) {
@@ -136,9 +263,7 @@ bool QueryParser::deleteParse()
         return false;
     }
     table_name_ = str_.substr(0, where_pos - 1);
-    std::cout << table_name_ << std::endl;
     condition_ = str_.substr(where_pos + 6);
-    std::cout << condition_ << std::endl;
     return true;
 }
 
@@ -149,10 +274,8 @@ bool QueryParser::updateParse()
         return false;
     }
     table_name_ = str_.substr(0, set_pos - 1);
-    std::cout << table_name_ << std::endl;
     size_t where_pos = str_.find("where");
     std::string conditions_str = str_.substr(set_pos + 4, where_pos - set_pos - 5);
-    std::cout << conditions_str << std::endl;
 
     std::vector<std::string> tokens = splitByComma(conditions_str);
     for (const auto& token : tokens) {
@@ -161,7 +284,6 @@ bool QueryParser::updateParse()
     }
 
     condition_ = str_.substr(where_pos + 6);
-    std::cout << condition_ << std::endl;
     return true;
 }
 

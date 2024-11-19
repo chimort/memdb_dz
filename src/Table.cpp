@@ -34,13 +34,19 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         if (!convertValue(value_str, column_schema, value)) {
             return false; 
         }
+
+        if (column_schema.attributes[0] || column_schema.attributes[2]) {
+            if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+                return false;
+            }
+        }
+
         row[column_name] = value;
 
-        if (column_name == "id") {
-            if (std::holds_alternative<int>(value)) {
-                id_value = std::get<int>(value);
-            } else {
-                return false;
+        if (column_schema.attributes[1]) { 
+            int provided_value = std::get<int>(value);
+            if (provided_value >= autoincrement_counters_[column_name]) {
+                autoincrement_counters_[column_name] = provided_value + 1;
             }
         }
     }
@@ -48,10 +54,21 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     for (const auto& column_schema : schema_) {
         const std::string& column_name = column_schema.name;
         if (row.find(column_name) == row.end()) {
-            row[column_name] = getDefaultValue(column_schema.type);
+            if (column_schema.attributes[1]) { // Если атрибут autoincrement установлен
+                row[column_name] = autoincrement_counters_[column_name]++;
+            } else if (column_schema.default_value.empty()) {
+                row[column_name] = getDefaultValue(column_schema.type);
+            } else {
+                config::ColumnValue default_value;
+                if (!convertValue(column_schema.default_value, column_schema, default_value)) {
+                    return false;
+                }
+                row[column_name] = default_value;
+            }  
         }
     }
 
+    // Обновляем id
     int id;
     if (id_value == -1) {
         id = next_id_++;
@@ -88,16 +105,22 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         const config::ColumnSchema& column_schema = schema_[schema_index];
         const std::string& column_name = column_schema.name;
         config::ColumnValue value;
+
         if (!convertValue(insert_values[i], column_schema, value)) {
             return false; 
         }
+        if (column_schema.attributes[0] || column_schema.attributes[2]) {
+            if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+                return false;
+            }
+        }
+
         row[column_name] = value;
 
-        if (column_name == "id") {
-            if (std::holds_alternative<int>(value)) {
-                id_value = std::get<int>(value);
-            } else {
-                return false; 
+        if (column_schema.attributes[1]) { 
+            int provided_value = std::get<int>(value);
+            if (provided_value >= autoincrement_counters_[column_name]) {
+                autoincrement_counters_[column_name] = provided_value + 1;
             }
         }
     }
@@ -105,9 +128,17 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     for (size_t i = 0; i < num_columns - num_values; ++i) {
         const config::ColumnSchema& column_schema = schema_[i];
         const std::string& column_name = column_schema.name;
-        if (row.find(column_name) == row.end()) {
+        if (column_schema.attributes[1]) { // Если атрибут autoincrement установлен
+                row[column_name] = autoincrement_counters_[column_name]++;
+        } else if (column_schema.default_value.empty()) {
             row[column_name] = getDefaultValue(column_schema.type);
-        }
+        } else {
+            config::ColumnValue default_value;
+            if (!convertValue(column_schema.default_value, column_schema, default_value)) {
+                return false;
+            }
+            row[column_name] = default_value;
+        }  
     }
 
     int id;

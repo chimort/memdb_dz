@@ -18,6 +18,8 @@ struct ColumnSchema {
     std::string name;
     ColumnType type;
     size_t max_size;
+    bool attributes[3] = {0}; // {unique, autoincrement, key}
+    std::string default_value;
 };
 
 
