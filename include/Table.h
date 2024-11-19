@@ -19,6 +19,9 @@ public:
     {
         for (const auto& column : schema_) {
             indices_[column.name] = {};
+            if (column.attributes[1]) { // autoincrement
+                autoincrement_counters_[column.name] = 0;
+            }
         }
     }
 
@@ -48,6 +51,9 @@ private:
     std::unordered_map<int, config::RowType> data_;
     std::unordered_map<std::string,
         std::unordered_multimap<std::size_t, int>> indices_;
+
+    std::unordered_map<std::string, int> autoincrement_counters_;
+    
     int next_id_ = 0;
 };
     
