@@ -8,7 +8,7 @@ using namespace memdb;
 using namespace parser; 
 
 TEST(QueryParserTest, InsertParseTest) {
-    std::string insert_query = "insert (id = 1, name = 'Alice', age = 30) to users";
+    std::string insert_query = "inSert (id = 1, name = 'Alice', age = 30) To users";
     QueryParser parser(insert_query);
     
     std::cout << "Testing query: " << insert_query << std::endl;
@@ -50,7 +50,7 @@ TEST(QueryParserTest, InsertParseTest) {
 }
 
 TEST(QueryParserTest, CreateParseTest) {
-    std::string create_query = R"(create table users ({key, autoincrement} id : int32 = 5000,\n {unique} login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
+    std::string create_query = R"(CREATE taBle users ({key, autoincrement} id : int32 = 5000,\n {unique} login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
     QueryParser parser(create_query);
     
     std::cout << "Testing query: " << create_query << std::endl;
@@ -154,7 +154,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
 
 
-    create_query = "create ordered index\n on users by login, id, admin";
+    create_query = "crEatE orDered index\n ON users BY login, id, admin";
     std::cout << "Testing query: " << create_query << std::endl;
     QueryParser parser2(create_query);
     bool parse2_result = parser2.parse();

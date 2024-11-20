@@ -22,6 +22,10 @@ bool QueryParser::parse()
     }
     str_ = str_.substr(start_pos);
 
+    if (str_.length() < 6) {
+        return false;
+    }
+    std::transform(str_.begin(), str_.begin() + 6, str_.begin(), [](unsigned char c) { return std::tolower(c); });
 
     if (str_.compare(0, 6, "insert") == 0) {
         command_type_ = CommandType::INSERT;
@@ -40,6 +44,10 @@ bool QueryParser::parse()
         str_ = str_.substr(7); 
         updateParse();
     } else if (str_.compare(0, 6, "create") == 0) {
+        if (str_.length() < 12) {
+            return false;
+        }
+        std::transform(str_.begin() + 6, str_.begin() + 12, str_.begin() + 6, [](unsigned char c) { return std::tolower(c); });
         if (str_.compare(0, 12, "create table") == 0){
             command_type_ = CommandType::CREATE_TABLE;
             createTableParse();
@@ -55,6 +63,36 @@ bool QueryParser::parse()
     return true;
 }
 
+
+size_t regularSearchWhere(const std::string& str){
+    static const std::regex pattern(R"(\b[wW][hH][eE][rR][eE]\b)");
+    std::smatch match;
+    if (!std::regex_search(str, match, pattern)) {
+        return false;
+    }
+
+    return match.position(0);
+}
+
+size_t regularSearchOn(const std::string& str){
+    static const std::regex pattern(R"(\b[oO][nN]\b)");
+    std::smatch match;
+    if (!std::regex_search(str, match, pattern)) {
+        return false;
+    }
+
+    return match.position(0);
+}
+
+size_t regularSearchBy(const std::string& str){
+    static const std::regex pattern(R"(\b[bB][yY]\b)");
+    std::smatch match;
+    if (!std::regex_search(str, match, pattern)) {
+        return false;
+    }
+
+    return match.position(0);
+}
 
 std::vector<std::string> QueryParser::splitByComma(const std::string& str) {
     std::vector<std::string> result;
@@ -223,20 +261,26 @@ bool QueryParser::insertParse() {
         }
     }
 
-    size_t to_pos = str_.find("to");
-    if (to_pos == std::string::npos) {
+    std::string take_name = str_.substr(close_paren_pos);
+    static const std::regex pattern(R"(\b[tT][oO]\b)"); //Ищет вариации to (\b значит целым словом)
+    std::smatch match;
+    if (!std::regex_search(take_name, match, pattern)) {
         return false;
     }
-    table_name_ = str_.substr(to_pos + 3);
+
+    table_name_ = take_name.substr(match.position(0) + 3);
     return true;
 }
 
 bool QueryParser::selectParse()
-{   
-    size_t from_pos = str_.find("from");
-    if (from_pos == std::string::npos) {
+{
+    static const std::regex pattern(R"(\b[fF][rR][oO][mM]\b)");
+    std::smatch match;
+    if (!std::regex_search(str_, match, pattern)) {
         return false;
     }
+    size_t from_pos = match.position(0);
+
     std::string values_str = str_.substr(0, from_pos);
 
     std::vector<std::string> tokens = splitByComma(values_str);
@@ -245,10 +289,7 @@ bool QueryParser::selectParse()
     }
 
 
-    size_t where_pos = str_.find("where");
-    if (where_pos == std::string::npos) {
-        return false;
-    }
+    size_t where_pos = regularSearchWhere(str_);
 
     table_name_ = str_.substr(from_pos + 5, where_pos - from_pos - 6);
     condition_ = str_.substr(where_pos + 6);
@@ -258,10 +299,8 @@ bool QueryParser::selectParse()
 
 bool QueryParser::deleteParse()
 {   
-    size_t where_pos = str_.find("where");
-    if (where_pos == std::string::npos) {
-        return false;
-    }
+    size_t where_pos = regularSearchWhere(str_);
+
     table_name_ = str_.substr(0, where_pos - 1);
     condition_ = str_.substr(where_pos + 6);
     return true;
@@ -269,12 +308,15 @@ bool QueryParser::deleteParse()
 
 bool QueryParser::updateParse()
 {
-    size_t set_pos = str_.find("set");
-    if (set_pos == std::string::npos) {
+    static const std::regex pattern(R"(\b[sS][eE][tT]\b)");
+    std::smatch match;
+    if (!std::regex_search(str_, match, pattern)) {
         return false;
     }
+    size_t set_pos = match.position(0);
+
     table_name_ = str_.substr(0, set_pos - 1);
-    size_t where_pos = str_.find("where");
+    size_t where_pos = regularSearchWhere(str_);
     std::string conditions_str = str_.substr(set_pos + 4, where_pos - set_pos - 5);
 
     std::vector<std::string> tokens = splitByComma(conditions_str);
