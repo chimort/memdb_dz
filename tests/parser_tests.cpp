@@ -211,3 +211,48 @@ TEST(QueryParserTest, CreateParseTest) {
     }  
     
 }
+
+TEST(QueryParserTest, SelectParseTest) {
+    std::string create_query = R"(SelEct id, login fRoM users WHErE is_admin || id < 10)";
+    QueryParser parser(create_query);
+
+    bool parse_result = parser.parse();
+
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "SELECT" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::SELECT);    
+    EXPECT_EQ(parser.getTableName(), "users");
+}
+
+TEST(QueryParserTest, DeleteParseTest) {
+    std::string create_query = R"(DeLETe users WHErE is_admin || id < 10)";
+    QueryParser parser(create_query);
+
+    bool parse_result = parser.parse();
+
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "DELETE" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::DELETE);    
+    EXPECT_EQ(parser.getTableName(), "users");
+}
+
+TEST(QueryParserTest, UpdateParseTest) {
+    std::string create_query = R"(UPdate users SET is_admin = true WHErE login = "vasya")";
+    QueryParser parser(create_query);
+
+    bool parse_result = parser.parse();
+
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "UPDATE" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::UPDATE);    
+    EXPECT_EQ(parser.getTableName(), "users");
+}
