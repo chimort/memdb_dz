@@ -231,22 +231,6 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
     }
 }
 
-config::ColumnValue Table::getDefaultValue(config::ColumnType column_type) 
-{
-    switch (column_type) {
-        case config::ColumnType::INT:
-            return int(0);
-        case config::ColumnType::STRING:
-            return std::string("");
-        case config::ColumnType::BOOL:
-            return bool(false);
-        case config::ColumnType::BITSTRING:
-            return config::BitString{};
-        default:
-            return std::string("");
-    }
-}
-
 void Table::indexRow(const int& id, const config::RowType& row) {
     for (const auto& column_schema : schema_) {
         const std::string& column_name = column_schema.name;

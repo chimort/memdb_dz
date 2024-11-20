@@ -47,7 +47,6 @@ private:
     void indexRow(const int& id, const config::RowType& row);
     size_t makeHashKey(const config::ColumnValue& value) const;
 
-    config::ColumnValue getDefaultValue(config::ColumnType column_type);
     bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
 
     std::vector<config::ColumnSchema> schema_;
