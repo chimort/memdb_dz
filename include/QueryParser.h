@@ -36,6 +36,7 @@ public:
     inline std::vector<std::string> getSelectedCol() const { return selected_columns_; }
     inline std::unordered_map<std::string, std::optional<config::ColumnValue>> getValues() const { return values_; }
     inline std::unordered_map<std::string, std::string> getInsertValues() const { return insert_values_; }
+    std::unordered_map<std::string, std::string> getUpdateValues() const { return update_values_; }
     inline std::vector<config::ColumnSchema> getCreateTableParametrs() const { return columns_parametrs_; };
     inline std::unordered_map<std::string, IndexType> getCreateIndexType() const { return column_index_type_; };
 

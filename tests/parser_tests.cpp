@@ -225,6 +225,13 @@ TEST(QueryParserTest, SelectParseTest) {
     EXPECT_TRUE(parse_result);
     EXPECT_EQ(parser.getCommandName(), CommandType::SELECT);    
     EXPECT_EQ(parser.getTableName(), "users");
+
+    std::cout << std::endl;
+    std::cout << "Parsed values: " << std::endl;
+    auto it = parser.getSelectedCol();
+    for (auto& expression : it){
+        std::cout << "Value: " << expression << std::endl;
+    }
 }
 
 TEST(QueryParserTest, DeleteParseTest) {
@@ -240,6 +247,8 @@ TEST(QueryParserTest, DeleteParseTest) {
     EXPECT_TRUE(parse_result);
     EXPECT_EQ(parser.getCommandName(), CommandType::DELETE);    
     EXPECT_EQ(parser.getTableName(), "users");
+
+
 }
 
 TEST(QueryParserTest, UpdateParseTest) {
@@ -255,4 +264,11 @@ TEST(QueryParserTest, UpdateParseTest) {
     EXPECT_TRUE(parse_result);
     EXPECT_EQ(parser.getCommandName(), CommandType::UPDATE);    
     EXPECT_EQ(parser.getTableName(), "users");
+
+    std::cout << std::endl;
+    std::cout << "Parsed values: " << std::endl;
+    auto it = parser.getUpdateValues();
+    for (auto& [key, value] : it){
+        std::cout << "Key: " << key << " Value: " << value << std::endl;
+    }
 }
