@@ -22,6 +22,9 @@ public:
             if (column.attributes[1]) { // autoincrement
                 autoincrement_counters_[column.name] = 0;
             }
+            if (column.attributes[0]) {
+                unique_null_value_[column.name] = false;
+            }
         }
     }
 
@@ -53,6 +56,7 @@ private:
         std::unordered_multimap<std::size_t, int>> indices_;
 
     std::unordered_map<std::string, int> autoincrement_counters_;
+    std::unordered_map<std::string, bool> unique_null_value_;
     
     int next_id_ = 0;
 };

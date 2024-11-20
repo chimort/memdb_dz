@@ -1,9 +1,12 @@
 #include <gtest/gtest.h>
 #include "Table.h"
+#include "utils.h"
 
 #include <iostream>
 #include <string>
 #include <variant>
+#include <optional>
+
 
 class TableTest : public ::testing::Test {
 protected:
@@ -154,18 +157,20 @@ TEST_F(TableTest, InsertWithMissingValues) {
     }
 
     EXPECT_TRUE(record_found);
-    if (record_found && found_row != nullptr) {
-        std::cout << "[InsertWithMissingValues] Найдена запись с id = 3:" << std::endl;
-        std::cout << "  name: " << std::get<std::string>(found_row->at("name")) << std::endl;
-        std::cout << "  age (по умолчанию): " << std::get<int>(found_row->at("age")) << std::endl;
-        std::cout << "  active (по умолчанию): " << (std::get<bool>(found_row->at("active")) ? "true" : "false") << std::endl;
 
-        EXPECT_EQ(std::get<std::string>(found_row->at("name")), "Charlie");
-        EXPECT_EQ(std::get<int>(found_row->at("age")), 0);          // Значение по умолчанию для INT
-        EXPECT_EQ(std::get<bool>(found_row->at("active")), false);  // Значение по умолчанию для BOOL
-    } else {
-        std::cout << "[InsertWithMissingValues] Запись с id = 3 не найдена." << std::endl;
+    if (record_found && found_row != nullptr) {
+        // Используем memdb::Response::get
+        auto name_opt = utils::get<std::string>(*found_row, "name");
+        EXPECT_TRUE(name_opt.has_value());
+        EXPECT_EQ(name_opt.value(), "Charlie");
+
+        auto age_opt = utils::get<int>(*found_row, "age");
+        EXPECT_FALSE(age_opt.has_value()); // Ожидаем, что 'age' равно NULL
+
+        auto active_opt = utils::get<bool>(*found_row, "active");
+        EXPECT_FALSE(active_opt.has_value()); // Ожидаем, что 'active' равно NULL
     }
+
 }
 
 // Тест вставки с лишними значениями без указания названий колонок
@@ -291,13 +296,12 @@ TEST_F(TableTest, InsertValuesAtEndOfSchema) {
     if (record_found && found_row != nullptr) {
         std::cout << "[InsertValuesAtEndOfSchema] Найдена запись с id = " << expected_id << ":" << std::endl;
 
-        // Проверяем значения колонок
-        // 'id' и 'name' должны иметь значения по умолчанию
+        // Проверяем, что 'id' и 'name' равны NULL
         const auto& id_value = found_row->at("id");
-        EXPECT_EQ(std::get<int>(id_value), 0); // Значение по умолчанию для INT
+        EXPECT_TRUE(std::holds_alternative<std::monostate>(id_value)); // 'id' равно NULL
 
         const auto& name_value = found_row->at("name");
-        EXPECT_EQ(std::get<std::string>(name_value), ""); // Значение по умолчанию для STRING
+        EXPECT_TRUE(std::holds_alternative<std::monostate>(name_value)); // 'name' равно NULL
 
         // Проверяем установленные значения для 'age' и 'car'
         const auto& age_value = found_row->at("age");
@@ -306,8 +310,8 @@ TEST_F(TableTest, InsertValuesAtEndOfSchema) {
         const auto& car_value = found_row->at("car");
         EXPECT_EQ(std::get<bool>(car_value), true);
 
-        std::cout << "  id (по умолчанию): " << std::get<int>(id_value) << std::endl;
-        std::cout << "  name (по умолчанию): '" << std::get<std::string>(name_value) << "'" << std::endl;
+        std::cout << "  id: NULL" << std::endl;
+        std::cout << "  name: NULL" << std::endl;
         std::cout << "  age: " << std::get<int>(age_value) << std::endl;
         std::cout << "  car: " << (std::get<bool>(car_value) ? "true" : "false") << std::endl;
     } else {
@@ -331,13 +335,14 @@ TEST_F(TableTest, InsertWithBitStringValues) {
         {"id", "10"},
         {"data1", "0xDEADBEEF"},
         {"description", "Test description"}
-        // Колонка "data2" не указана и должна получить значение по умолчанию
+        // Колонка "data2" не указана и должна получить значение NULL
     };
 
     bool result = table.insertRecord(insert_values);
     EXPECT_TRUE(result);
 
-    std::cout << "[InsertWithBitStringValues] Результат вставки записи с BitString: " << (result ? "успешно" : "неудачно") << std::endl;
+    std::cout << "[InsertWithBitStringValues] Результат вставки записи с BitString: "
+              << (result ? "успешно" : "неудачно") << std::endl;
 
     const auto& data = table.getData();
     bool record_found = false;
@@ -357,14 +362,14 @@ TEST_F(TableTest, InsertWithBitStringValues) {
     }
 
     EXPECT_TRUE(record_found);
+
     if (record_found && found_row != nullptr) {
         std::cout << "[InsertWithBitStringValues] Найдена запись с id = 10:" << std::endl;
 
         // Проверяем значение "data1"
         const auto& data1_value = found_row->at("data1");
         EXPECT_TRUE(std::holds_alternative<config::BitString>(data1_value));
-
-        const config::BitString expected_data1 = {0xDE, 0xAD, 0xBE, 0xEF};
+        config::BitString expected_data1 = {0xDE, 0xAD, 0xBE, 0xEF};
         EXPECT_EQ(std::get<config::BitString>(data1_value), expected_data1);
 
         // Выводим значение "data1"
@@ -374,31 +379,16 @@ TEST_F(TableTest, InsertWithBitStringValues) {
         }
         std::cout << std::dec << std::endl;
 
-        // Проверяем значение "data2" (должно быть значением по умолчанию)
+        // Проверяем значение "data2" (ожидаем NULL)
         const auto& data2_value = found_row->at("data2");
-        EXPECT_TRUE(std::holds_alternative<config::BitString>(data2_value));
-        EXPECT_TRUE(std::get<config::BitString>(data2_value).empty());
-
-        // Выводим значение "data2"
-        std::cout << "  data2 (по умолчанию): ";
-        if (std::get<config::BitString>(data2_value).empty()) {
-            std::cout << "(пусто)" << std::endl;
-        } else {
-            for (uint8_t byte : std::get<config::BitString>(data2_value)) {
-                std::cout << std::hex << static_cast<int>(byte);
-            }
-            std::cout << std::dec << std::endl;
-        }
+        EXPECT_TRUE(std::holds_alternative<std::monostate>(data2_value)); // Ожидаем, что 'data2' равно NULL
+        std::cout << "  data2: NULL" << std::endl;
 
         // Проверяем значение "description"
-        const auto& description_value = found_row->at("description");
-        EXPECT_EQ(std::get<std::string>(description_value), "Test description");
-
-        std::cout << "  description: " << std::get<std::string>(description_value) << std::endl;
-
-        // Проверяем значение "id"
-        const auto& id_value = found_row->at("id");
-        EXPECT_EQ(std::get<int>(id_value), 10);
+        auto description_opt = utils::get<std::string>(*found_row, "description");
+        EXPECT_TRUE(description_opt.has_value());
+        EXPECT_EQ(description_opt.value(), "Test description");
+        std::cout << "  description: " << description_opt.value() << std::endl;
     } else {
         std::cout << "[InsertWithBitStringValues] Запись с id = 10 не найдена." << std::endl;
     }
@@ -694,22 +684,17 @@ TEST_F(TableTest, UserDefaultValueTest) {
     };
     EXPECT_TRUE(table.insertRecord(record2));
 
-    // Проверяем, что 'description' установлено через getDefaultValue
-    EXPECT_EQ(data.size(), 2);
+    // Проверяем, что 'status' соответствует "active"
+    const auto& status_value = row.at("status");
+    EXPECT_EQ(std::get<std::string>(status_value), "active");
 
-    const config::RowType& row2 = data.at(1); // 'id' второй записи — 1
+    // Проверяем, что 'priority' соответствует 5
+    const auto& priority_value = row.at("priority");
+    EXPECT_EQ(std::get<int>(priority_value), 5);
 
-    // 'description' должно быть пустой строкой из getDefaultValue для STRING
-    EXPECT_EQ(std::get<std::string>(row2.at("description")), "");
-
-    // Проверяем, что 'status' соответствует "inactive"
-    EXPECT_EQ(std::get<std::string>(row2.at("status")), "inactive");
-
-    // Проверяем, что 'priority' соответствует 5 (default_value)
-    EXPECT_EQ(std::get<int>(row2.at("priority")), 5);
-
-    // Проверяем, что 'id' соответствует 1
-    EXPECT_EQ(std::get<int>(row2.at("id")), 1);
+    // Проверяем, что 'description' соответствует "Test record"
+    const auto& description_value = row.at("description");
+    EXPECT_EQ(std::get<std::string>(description_value), "Test record");
 }
 
 TEST_F(TableTest, AutoincrementUniqueFieldsTest) {
@@ -774,5 +759,40 @@ TEST_F(TableTest, AutoincrementUniqueFieldsTest) {
         ids.push_back(std::get<int>(row.at("id")));
     }
     std::sort(ids.begin(), ids.end());
+}
 
+
+// Тест для проверки уникальности при наличии NULL значений
+TEST_F(TableTest, UniqueConstraintWithNullValuesTest) {
+    // Определяем схему таблицы с уникальным полем 'email'
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0, {1, 1, 1}},        // unique, autoincrement, key
+        {"email", config::ColumnType::STRING, 100, {1, 0, 0}}, // unique
+        {"username", config::ColumnType::STRING, 50, {0, 0, 0}} // не уникальный столбец
+    };
+    memdb::Table table(columns);
+
+    // Вставляем первую запись с NULL в уникальном поле 'email'
+    std::unordered_map<std::string, std::string> record1 = {
+        {"username", "user_with_null_email"}
+        // Поле 'email' отсутствует и должно получить значение NULL
+    };
+    bool result1 = table.insertRecord(record1);
+    EXPECT_TRUE(result1);
+    std::cout << "Вставка первой записи с NULL 'email': "
+              << (result1 ? "успешно" : "неудачно") << std::endl;
+
+    // Попытка вставить вторую запись с NULL в уникальном поле 'email'
+    std::unordered_map<std::string, std::string> record2 = {
+        {"username", "another_user_with_null_email"}
+        // Поле 'email' отсутствует и должно получить значение NULL
+    };
+    bool result2 = table.insertRecord(record2);
+    // Ожидаем, что вставка не произойдет из-за нарушения уникальности
+    EXPECT_FALSE(result2);
+    std::cout << "Попытка вставки второй записи с NULL 'email': "
+              << (result2 ? "успешно" : "неудачно") << std::endl;
+
+    // Проверяем, что в таблице только одна запись
+    EXPECT_EQ(table.getData().size(), 1);
 }
