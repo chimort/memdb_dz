@@ -214,6 +214,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
 TEST(QueryParserTest, SelectParseTest) {
     std::string create_query = R"(SelEct id, login fRoM users WHErE is_admin || id < 10)";
+    std::cout << create_query << std::endl;
     QueryParser parser(create_query);
 
     bool parse_result = parser.parse();
@@ -232,10 +233,12 @@ TEST(QueryParserTest, SelectParseTest) {
     for (auto& expression : it){
         std::cout << "Value: " << expression << std::endl;
     }
+    std::cout << "Condition: " << parser.getCondition() << std::endl;
 }
 
 TEST(QueryParserTest, DeleteParseTest) {
     std::string create_query = R"(DeLETe users WHErE is_admin || id < 10)";
+    std::cout << create_query << std::endl;
     QueryParser parser(create_query);
 
     bool parse_result = parser.parse();
@@ -248,11 +251,12 @@ TEST(QueryParserTest, DeleteParseTest) {
     EXPECT_EQ(parser.getCommandName(), CommandType::DELETE);    
     EXPECT_EQ(parser.getTableName(), "users");
 
-
+    std::cout << "Table name: " << parser.getTableName() << " Condition: " << parser.getCondition() << std::endl;
 }
 
 TEST(QueryParserTest, UpdateParseTest) {
     std::string create_query = R"(UPdate users SET is_admin = true WHErE login = "vasya")";
+    std::cout << create_query << std::endl;
     QueryParser parser(create_query);
 
     bool parse_result = parser.parse();
@@ -280,6 +284,9 @@ TEST(QueryParserTest, EmptyConditionTest){
     std::string str3 = "DeLETe users is_admin || id < 10"; //skiped where
     std::string str4 = "UPdate users is_admin = true where login = 'vasya'"; //skiped set
 
+    std::cout << "Strings: " << std::endl;
+    std::cout << str1 << std::endl << str2 << std::endl << str3 << std::endl << str4 << std::endl; 
+
     QueryParser parser1(str1);
     bool res_parse1 = parser1.parse();
     QueryParser parser2(str2);
@@ -289,6 +296,7 @@ TEST(QueryParserTest, EmptyConditionTest){
     QueryParser parser4(str4);
     bool res_parse4 = parser4.parse();
 
+    std::cout << "Expected false";
     EXPECT_FALSE(res_parse1);
     EXPECT_FALSE(res_parse2);
     EXPECT_FALSE(res_parse3);
