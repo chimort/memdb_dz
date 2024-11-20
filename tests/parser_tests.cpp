@@ -8,7 +8,7 @@ using namespace memdb;
 using namespace parser; 
 
 TEST(QueryParserTest, InsertParseTest) {
-    std::string insert_query = "insert (id = 1, name = 'Alice', age = 30) to users";
+    std::string insert_query = "inSert (id = 1, name = 'Alice', age = 30) To users";
     QueryParser parser(insert_query);
     
     std::cout << "Testing query: " << insert_query << std::endl;
@@ -50,7 +50,7 @@ TEST(QueryParserTest, InsertParseTest) {
 }
 
 TEST(QueryParserTest, CreateParseTest) {
-    std::string create_query = R"(create table users ({key, autoincrement} id : int32 = 5000,\n {unique} login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
+    std::string create_query = R"(CREATE taBle users ({key, autoincrement} id : int32,\n login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
     QueryParser parser(create_query);
     
     std::cout << "Testing query: " << create_query << std::endl;
@@ -67,8 +67,8 @@ TEST(QueryParserTest, CreateParseTest) {
     
 
     std::vector<config::ColumnSchema> columns_parametrs_ = {
-        {"id", config::ColumnType::INT, 0, {0, 1, 1}, "5000"},
-        {"login", config::ColumnType::STRING, 12, {1, 0, 0}, "Привет, БД."}, 
+        {"id", config::ColumnType::INT, 0, {0, 1, 1}},
+        {"login", config::ColumnType::STRING, 12, {0, 0, 0}, "Привет, БД."}, 
         {"password_hash", config::ColumnType::BITSTRING, 9, {0, 0, 0}, ""},
         {"is_admin", config::ColumnType::BOOL, 0, {0, 0, 0}, "false"}
     };
@@ -154,7 +154,7 @@ TEST(QueryParserTest, CreateParseTest) {
 
 
 
-    create_query = "create ordered index\n on users by login, id, admin";
+    create_query = "crEatE orDered index\n ON users BY login, id, admin";
     std::cout << "Testing query: " << create_query << std::endl;
     QueryParser parser2(create_query);
     bool parse2_result = parser2.parse();
@@ -210,4 +210,95 @@ TEST(QueryParserTest, CreateParseTest) {
         }
     }  
     
+}
+
+TEST(QueryParserTest, SelectParseTest) {
+    std::string create_query = R"(SelEct id, login fRoM users WHErE is_admin || id < 10)";
+    std::cout << create_query << std::endl;
+    QueryParser parser(create_query);
+
+    bool parse_result = parser.parse();
+
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "SELECT" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::SELECT);    
+    EXPECT_EQ(parser.getTableName(), "users");
+
+    std::cout << std::endl;
+    std::cout << "Parsed values: " << std::endl;
+    auto it = parser.getSelectedCol();
+    for (auto& expression : it){
+        std::cout << "Value: " << expression << std::endl;
+    }
+    std::cout << "Condition: " << parser.getCondition() << std::endl;
+}
+
+TEST(QueryParserTest, DeleteParseTest) {
+    std::string create_query = R"(DeLETe users WHErE is_admin || id < 10)";
+    std::cout << create_query << std::endl;
+    QueryParser parser(create_query);
+
+    bool parse_result = parser.parse();
+
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "DELETE" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::DELETE);    
+    EXPECT_EQ(parser.getTableName(), "users");
+
+    std::cout << "Table name: " << parser.getTableName() << " Condition: " << parser.getCondition() << std::endl;
+}
+
+TEST(QueryParserTest, UpdateParseTest) {
+    std::string create_query = R"(UPdate users SET is_admin = true WHErE login = "vasya")";
+    std::cout << create_query << std::endl;
+    QueryParser parser(create_query);
+
+    bool parse_result = parser.parse();
+
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "UPDATE" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::UPDATE);    
+    EXPECT_EQ(parser.getTableName(), "users");
+
+    std::cout << std::endl;
+    std::cout << "Parsed values: " << std::endl;
+    auto it = parser.getUpdateValues();
+    for (auto& [key, value] : it){
+        std::cout << "Key: " << key << " Value: " << value << std::endl;
+    }
+    std::cout << " Condition: " << parser.getCondition();
+}
+
+TEST(QueryParserTest, EmptyConditionTest){
+    std::string str1 = "inSert (id = 1, name = 'Alice', age = 30) users"; //skiped to
+    std::string str2 = "SelEct id, login users WHErE is_admin || id < 10"; //skiped from
+    std::string str3 = "DeLETe users is_admin || id < 10"; //skiped where
+    std::string str4 = "UPdate users is_admin = true where login = 'vasya'"; //skiped set
+
+    std::cout << "Strings: " << std::endl;
+    std::cout << str1 << std::endl << str2 << std::endl << str3 << std::endl << str4 << std::endl; 
+
+    QueryParser parser1(str1);
+    bool res_parse1 = parser1.parse();
+    QueryParser parser2(str2);
+    bool res_parse2 = parser2.parse();
+    QueryParser parser3(str3);
+    bool res_parse3 = parser3.parse();
+    QueryParser parser4(str4);
+    bool res_parse4 = parser4.parse();
+
+    std::cout << "Expected false";
+    EXPECT_FALSE(res_parse1);
+    EXPECT_FALSE(res_parse2);
+    EXPECT_FALSE(res_parse3);
+    EXPECT_FALSE(res_parse4);
 }
