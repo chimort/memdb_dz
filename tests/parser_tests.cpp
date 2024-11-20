@@ -50,7 +50,7 @@ TEST(QueryParserTest, InsertParseTest) {
 }
 
 TEST(QueryParserTest, CreateParseTest) {
-    std::string create_query = R"(CREATE taBle users ({key, autoincrement} id : int32 = 5000,\n {unique} login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
+    std::string create_query = R"(CREATE taBle users ({key, autoincrement} id : int32,\n login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
     QueryParser parser(create_query);
     
     std::cout << "Testing query: " << create_query << std::endl;
@@ -67,8 +67,8 @@ TEST(QueryParserTest, CreateParseTest) {
     
 
     std::vector<config::ColumnSchema> columns_parametrs_ = {
-        {"id", config::ColumnType::INT, 0, {0, 1, 1}, "5000"},
-        {"login", config::ColumnType::STRING, 12, {1, 0, 0}, "Привет, БД."}, 
+        {"id", config::ColumnType::INT, 0, {0, 1, 1}},
+        {"login", config::ColumnType::STRING, 12, {0, 0, 0}, "Привет, БД."}, 
         {"password_hash", config::ColumnType::BITSTRING, 9, {0, 0, 0}, ""},
         {"is_admin", config::ColumnType::BOOL, 0, {0, 0, 0}, "false"}
     };

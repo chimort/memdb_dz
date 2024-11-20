@@ -30,19 +30,19 @@ bool QueryParser::parse()
     if (str_.compare(0, 6, "insert") == 0) {
         command_type_ = CommandType::INSERT;
         str_ = str_.substr(6); 
-        insertParse();
+        return insertParse();
     } else if (str_.compare(0, 6, "select") == 0) {
         command_type_ = CommandType::SELECT;
         str_ = str_.substr(7);
-        selectParse();
+        return selectParse();
     } else if (str_.compare(0, 6, "delete") == 0) {
         command_type_ = CommandType::DELETE;
         str_ = str_.substr(7);
-        deleteParse();
+        return deleteParse();
     } else if (str_.compare(0, 6, "update") == 0) {
         command_type_ = CommandType::UPDATE;
         str_ = str_.substr(7); 
-        updateParse();
+        return updateParse();
     } else if (str_.compare(0, 6, "create") == 0) {
         if (str_.length() < 12) {
             return false;
@@ -50,10 +50,10 @@ bool QueryParser::parse()
         std::transform(str_.begin() + 6, str_.begin() + 12, str_.begin() + 6, [](unsigned char c) { return std::tolower(c); });
         if (str_.compare(0, 12, "create table") == 0){
             command_type_ = CommandType::CREATE_TABLE;
-            createTableParse();
+            return createTableParse();
         } else {
             command_type_ = CommandType::CREATE_INDEX;
-            createIndexParse();
+            return createIndexParse();
         }
     } else {
         command_type_ = CommandType::UNKNOWN;
@@ -222,6 +222,10 @@ bool QueryParser::createTableParse() {
 
         // Значение по умолчанию (если есть)
         if ((*it)[5].matched) {
+            if (params.attributes[0] == 1){
+                return false;
+            }
+
             params.default_value = (*it)[5].str();
             // Удаляем кавычки, если значение обрамлено ими
             if (!params.default_value.empty() && params.default_value.front() == '"' && params.default_value.back() == '"') {
