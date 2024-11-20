@@ -39,11 +39,15 @@ private:
     struct Response : public IResponse {
         bool status_;
         std::string msg_;
+        std::unordered_map<int, config::RowType> data_;
 
         inline void setStatus(const bool& status) { status_ = status; }
         inline void setMessage(const std::string& msg) { msg_ = msg; }
         inline bool getStatus() const override { return status_; }
         inline const std::string& getMessage() const override { return msg_; }
+        
+        inline void setData(const std::unordered_map<int, config::RowType>& data) { data_ = data; }
+        inline const std::unordered_map<int, config::RowType>& getData() { return data_; }
     };
     
     std::unordered_map<std::string, std::shared_ptr<Table>> tables_;

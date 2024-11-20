@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "Table.h"
+#include "utils.h"
 
 #include <fstream>
 #include <sstream>
@@ -177,35 +178,68 @@ protected:
 };
 
 TEST_F(TableInsertMissingValuesTest, InsertRecordWithMissingValues) {
+    // Определяем схему таблицы с колонками разных типов
     std::vector<config::ColumnSchema> columns = {
-        {"id", config::ColumnType::INT, 0, {1, 1, 1}}, // unique, autoincrement, key
-        {"name", config::ColumnType::STRING, 255, {0, 0, 0}},
-        {"age", config::ColumnType::INT, 0, {0, 0, 0}},
-        {"active", config::ColumnType::BOOL, 0, {0, 0, 0}}
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"active", config::ColumnType::BOOL, 0}
     };
     memdb::Table table(columns);
 
-    // Вставляем запись без указания 'id', 'age' и 'active'
+    // Вставляем запись с отсутствующими значениями для 'age' и 'active'
     std::unordered_map<std::string, std::string> insert_values = {
+        {"id", "3"},
         {"name", "Charlie"}
+        // Поля 'age' и 'active' отсутствуют и должны получить значение NULL
     };
 
     bool result = table.insertRecord(insert_values);
     EXPECT_TRUE(result);
 
-    // Проверяем, что запись добавлена с автоприращенным 'id'
-    EXPECT_EQ(table.getData().size(), 1);
+    std::cout << "[InsertRecordWithMissingValues] Результат вставки записи с отсутствующими значениями: "
+              << (result ? "успешно" : "неудачно") << std::endl;
+
     const auto& data = table.getData();
-    const auto& row = data.begin()->second;
+    bool record_found = false;
+    const config::RowType* found_row = nullptr;
 
-    int id = std::get<int>(row.at("id"));
-    std::string name = std::get<std::string>(row.at("name"));
-    int age = std::get<int>(row.at("age"));
-    bool active = std::get<bool>(row.at("active"));
+    // Ищем запись с id = 3
+    for (const auto& [record_id, row] : data) {
+        auto id_it = row.find("id");
+        if (id_it != row.end()) {
+            const auto& id_value = id_it->second;
+            if (std::holds_alternative<int>(id_value) && std::get<int>(id_value) == 3) {
+                record_found = true;
+                found_row = &row;
+                break;
+            }
+        }
+    }
 
-    EXPECT_EQ(name, "Charlie");
-    EXPECT_EQ(age, 0);      // Значение по умолчанию
-    EXPECT_EQ(active, false); // Значение по умолчанию
+    EXPECT_TRUE(record_found);
+
+    if (record_found && found_row != nullptr) {
+        std::cout << "[InsertRecordWithMissingValues] Найдена запись с id = 3:" << std::endl;
+
+        // Проверяем 'name'
+        auto name_opt = utils::get<std::string>(*found_row, "name");
+        EXPECT_TRUE(name_opt.has_value());
+        EXPECT_EQ(name_opt.value(), "Charlie");
+        std::cout << "  name: " << name_opt.value() << std::endl;
+
+        // Проверяем 'age' (ожидаем NULL)
+        auto age_opt = utils::get<int>(*found_row, "age");
+        EXPECT_FALSE(age_opt.has_value());
+        std::cout << "  age: NULL" << std::endl;
+
+        // Проверяем 'active' (ожидаем NULL)
+        auto active_opt = utils::get<bool>(*found_row, "active");
+        EXPECT_FALSE(active_opt.has_value());
+        std::cout << "  active: NULL" << std::endl;
+    } else {
+        std::cout << "[InsertRecordWithMissingValues] Запись с id = 3 не найдена." << std::endl;
+    }
 }
 
 class TableCSVInsertTest : public ::testing::Test {

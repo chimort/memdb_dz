@@ -54,17 +54,23 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     for (const auto& column_schema : schema_) {
         const std::string& column_name = column_schema.name;
         if (row.find(column_name) == row.end()) {
-            if (column_schema.attributes[1]) { // Если атрибут autoincrement установлен
+            if (column_schema.attributes[1]) { // Если autoincrement
                 row[column_name] = autoincrement_counters_[column_name]++;
-            } else if (column_schema.default_value.empty()) {
-                row[column_name] = getDefaultValue(column_schema.type);
-            } else {
+            } else if (!column_schema.default_value.empty()) {
                 config::ColumnValue default_value;
                 if (!convertValue(column_schema.default_value, column_schema, default_value)) {
                     return false;
                 }
                 row[column_name] = default_value;
-            }  
+            } else {
+                if (column_schema.attributes[0] || column_schema.attributes[2]) {
+                    if (unique_null_value_[column_name]) {
+                        return false;
+                    }
+                    unique_null_value_[column_name] = true;
+                }
+                row[column_name] = std::monostate{}; // Значение NULL
+            }
         }
     }
 
@@ -128,17 +134,23 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     for (size_t i = 0; i < num_columns - num_values; ++i) {
         const config::ColumnSchema& column_schema = schema_[i];
         const std::string& column_name = column_schema.name;
-        if (column_schema.attributes[1]) { // Если атрибут autoincrement установлен
+        if (column_schema.attributes[1]) { // Если autoincrement
                 row[column_name] = autoincrement_counters_[column_name]++;
-        } else if (column_schema.default_value.empty()) {
-            row[column_name] = getDefaultValue(column_schema.type);
-        } else {
+        } else if (!column_schema.default_value.empty()) {
             config::ColumnValue default_value;
             if (!convertValue(column_schema.default_value, column_schema, default_value)) {
                 return false;
             }
             row[column_name] = default_value;
-        }  
+        } else {
+            if (column_schema.attributes[0] || column_schema.attributes[2]) {
+                if (unique_null_value_[column_name]) {
+                    return false;
+                }
+                unique_null_value_[column_name] = true;
+            }
+            row[column_name] = std::monostate{}; // Значение NULL
+        }
     }
 
     int id;
@@ -157,7 +169,6 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     }
 
     data_[id] = row;
-    indexRow(id, row);
     return true;
 }
 
@@ -248,11 +259,13 @@ void Table::indexRow(const int& id, const config::RowType& row) {
     }
 }
 
-size_t Table::makeHashKey(const config::ColumnValue& value) const 
-{
+size_t Table::makeHashKey(const config::ColumnValue& value) const {
     return std::visit([](const auto& val) -> size_t {
         using T = std::decay_t<decltype(val)>;
-        if constexpr (std::is_same_v<T, config::BitString>) {
+        if constexpr (std::is_same_v<T, std::monostate>) {
+            // Возвращаем фиксированный хеш для NULL значений
+            return std::hash<std::string>{}("NULL_VALUE");
+        } else if constexpr (std::is_same_v<T, config::BitString>) {
             std::hash<std::string> hasher;
             std::string bitstring_str(val.begin(), val.end());
             return hasher(bitstring_str);

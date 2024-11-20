@@ -24,7 +24,7 @@ struct ColumnSchema {
 
 
 using BitString = std::vector<uint8_t>;
-using ColumnValue = std::variant<int, std::string, bool, BitString>; 
+using ColumnValue = std::variant<std::monostate, int, std::string, bool, BitString>; 
 using RowType = std::unordered_map<std::string, ColumnValue>;
 
 } // namespace config
