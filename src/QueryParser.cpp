@@ -64,31 +64,31 @@ bool QueryParser::parse()
 }
 
 
-size_t regularSearchWhere(const std::string& str){
+ssize_t regularSearchWhere(const std::string& str){
     static const std::regex pattern(R"(\b[wW][hH][eE][rR][eE]\b)");
     std::smatch match;
     if (!std::regex_search(str, match, pattern)) {
-        return false;
+        return -1;
     }
 
     return match.position(0);
 }
 
-size_t regularSearchOn(const std::string& str){
+ssize_t regularSearchOn(const std::string& str){
     static const std::regex pattern(R"(\b[oO][nN]\b)");
     std::smatch match;
     if (!std::regex_search(str, match, pattern)) {
-        return false;
+        return -1;
     }
 
     return match.position(0);
 }
 
-size_t regularSearchBy(const std::string& str){
+ssize_t regularSearchBy(const std::string& str){
     static const std::regex pattern(R"(\b[bB][yY]\b)");
     std::smatch match;
     if (!std::regex_search(str, match, pattern)) {
-        return false;
+        return -1;
     }
 
     return match.position(0);
@@ -293,7 +293,10 @@ bool QueryParser::selectParse()
     }
 
 
-    size_t where_pos = regularSearchWhere(str_);
+    ssize_t where_pos = regularSearchWhere(str_);
+    if (where_pos == -1){
+        return false;
+    }
 
     table_name_ = str_.substr(from_pos + 5, where_pos - from_pos - 6);
     condition_ = str_.substr(where_pos + 6);
@@ -303,7 +306,10 @@ bool QueryParser::selectParse()
 
 bool QueryParser::deleteParse()
 {   
-    size_t where_pos = regularSearchWhere(str_);
+    ssize_t where_pos = regularSearchWhere(str_);
+    if (where_pos == -1){
+        return false;
+    }
 
     table_name_ = str_.substr(0, where_pos - 1);
     condition_ = str_.substr(where_pos + 6);
@@ -320,7 +326,10 @@ bool QueryParser::updateParse()
     size_t set_pos = match.position(0);
 
     table_name_ = str_.substr(0, set_pos - 1);
-    size_t where_pos = regularSearchWhere(str_);
+    ssize_t where_pos = regularSearchWhere(str_);
+    if (where_pos == -1){
+        return false;
+    }
     std::string conditions_str = str_.substr(set_pos + 4, where_pos - set_pos - 5);
 
     std::vector<std::string> tokens = splitByComma(conditions_str);

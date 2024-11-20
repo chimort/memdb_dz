@@ -271,4 +271,26 @@ TEST(QueryParserTest, UpdateParseTest) {
     for (auto& [key, value] : it){
         std::cout << "Key: " << key << " Value: " << value << std::endl;
     }
+    std::cout << " Condition: " << parser.getCondition();
+}
+
+TEST(QueryParserTest, EmptyConditionTest){
+    std::string str1 = "inSert (id = 1, name = 'Alice', age = 30) users"; //skiped to
+    std::string str2 = "SelEct id, login users WHErE is_admin || id < 10"; //skiped from
+    std::string str3 = "DeLETe users is_admin || id < 10"; //skiped where
+    std::string str4 = "UPdate users is_admin = true where login = 'vasya'"; //skiped set
+
+    QueryParser parser1(str1);
+    bool res_parse1 = parser1.parse();
+    QueryParser parser2(str2);
+    bool res_parse2 = parser2.parse();
+    QueryParser parser3(str3);
+    bool res_parse3 = parser3.parse();
+    QueryParser parser4(str4);
+    bool res_parse4 = parser4.parse();
+
+    EXPECT_FALSE(res_parse1);
+    EXPECT_FALSE(res_parse2);
+    EXPECT_FALSE(res_parse3);
+    EXPECT_FALSE(res_parse4);
 }
