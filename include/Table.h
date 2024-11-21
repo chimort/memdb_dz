@@ -34,6 +34,7 @@ public:
     bool insertRecord(const std::unordered_map<std::string, std::string>& insert_values);
     // Метод для вставки без указания названий колонок
     bool insertRecord(const std::vector<std::string>& insert_values);
+    bool insertRowType(const config::RowType& insert_values);
 
     inline const std::unordered_map<int, config::RowType>& getData() const { return data_; }
     inline const std::vector<config::ColumnSchema>& getSchema() const { return schema_; }

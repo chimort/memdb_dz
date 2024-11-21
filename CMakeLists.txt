@@ -24,6 +24,7 @@ set(TEST_FILES
     tests/parser_tests.cpp
     tests/table_tests.cpp
     tests/files_tests.cpp
+    tests/commands_tests.cpp
 )
 
 add_executable(tests ${TEST_FILES})

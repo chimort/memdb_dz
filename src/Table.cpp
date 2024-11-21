@@ -172,6 +172,17 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     return true;
 }
 
+bool Table::insertRowType(const config::RowType& row) {
+    int id = 0;
+
+    while(data_.find(id) != data_.end()){
+        ++id;
+    }
+
+    data_[id] = row;
+    return true;
+}
+
 bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, 
     config::ColumnValue& out_value) 
 {

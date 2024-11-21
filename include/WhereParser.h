@@ -1,4 +1,3 @@
-#pragma once
 #include <map>
 #include <vector>
 #include <cstdint>
@@ -922,6 +921,18 @@ std::shared_ptr<Statement> compile(const std::vector<std::string>& query, std::v
         }
         else if(stmt == "!="){
             ptr = std::make_shared<NEOp>();
+        }
+        else if(stmt == "!"){
+            ptr = std::make_shared<NotOp>();
+        }
+        else if(stmt == "^^"){
+            ptr = std::make_shared<XorOp>();
+        }
+        else if(stmt == "&&"){
+            ptr = std::make_shared<AndOp>();
+        }
+        else if(stmt == "||"){
+            ptr = std::make_shared<OrOp>();
         }
         else if(isNum(stmt)){
             ptr = std::make_shared<ConstOp>(atoi(stmt.c_str()), -1);

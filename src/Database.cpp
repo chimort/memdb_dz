@@ -148,7 +148,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             for( auto old_s : table_it->second->getSchema()){
                 for ( auto new_s : selected_columns){
                     if(old_s.name == new_s){
-                        new_schema.append(old_s);
+                        new_schema.push_back(old_s);
                     }
                 }
             }
@@ -159,17 +159,24 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             std::vector<std::string> column_name;
             auto Expression = parse_where(condition, column_name);
 
+            std::vector<config::ColumnValue> statement(column_name.size());
             for( auto row : table_it->second->getData()){
                 for(int i = 0; i < column_name.size(); ++i) {
                     statement[i] = row.second[column_name[i]];
                 }
-                auto ans = temp ->apply(statement);
-                if( ans[column_name.size()]){
-                    std::unordered_map<std::string, std::string> new_row;
+                auto ans = Expression ->apply(statement);
+                if(std::holds_alternative<std::monostate>(ans[column_name.size()])){
+                    config::RowType new_row;
                     for(auto name: new_schema){
                         new_row[name.name] = row.second[name.name];
                     }
-                    new_Table.insertRecord(new_row);
+                    new_Table.insertRowType(new_row);
+                }else if(std::get<bool>(ans[column_name.size()])){
+                    config::RowType new_row;
+                    for(auto name: new_schema){
+                        new_row[name.name] = row.second[name.name];
+                    }
+                    new_Table.insertRowType(new_row);
                 }
             }
             response->setData(new_Table.getData());
