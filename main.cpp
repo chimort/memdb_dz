@@ -4,32 +4,48 @@
 int main() {
     memdb::Database& db = memdb::Database::getInstance();
 
-    // Create a table to insert records into
     std::string create_table_query = "create table my_table (id : int32, name : string[32], age : int32)";
-    auto response = db.execute(create_table_query);
-    if (response->getStatus()) {
-        std::cout << "Success: " << response->getMessage() << std::endl;
-    } else {
-        std::cout << "Error: " << response->getMessage() << std::endl;
+    auto create_response = db.execute(create_table_query);
+    if (!create_response->getStatus()) {
+        std::cerr << "Ошибка создания таблицы: " << create_response->getMessage() << std::endl;
+        return 1;
     }
 
+    std::string insert_query1 = "insert (id = 1, name = 'Alice', age = 30) to my_table";
+    auto insert_response1 = db.execute(insert_query1);
+    if (!insert_response1->getStatus()) {
+        std::cerr << "Ошибка вставки данных: " << insert_response1->getMessage() << std::endl;
+        return 1;
+    }
 
-    // Insert a record into the table
-    std::string insert_query = "insert (id = 1, name = 'Alice', age = 30) to my_table";
-    // std::string dsag = "insert (,\"vasya\", 0xdeadbeefdeadbeef) to users";
-    // //std::string fdh = "insert (\nis_admin = true,\nlogin = \"admin\",\npassword_hash = 0x0000000000000000\t) to users";
-    // std::string sel = "select id, login from users where is_admin || id < 10";
-    // std::string del = "delete users where |login| % 2 = 0";
-    // std::string updt = "update users set login = login + \"_deleted\", is_admin = false where\npassword_hash < 0x00000000ffffffff";
+    std::string insert_query2 = "insert (id = 2, name = 'Bob', age = 25) to my_table";
+    auto insert_response2 = db.execute(insert_query2);
+    if (!insert_response2->getStatus()) {
+        std::cerr << "Ошибка вставки данных: " << insert_response2->getMessage() << std::endl;
+        return 1;
+    }
 
-    
-    auto response1 = db.execute(insert_query);
+    std::string insert_query3 = "insert (id = 3, name = 'Charlie', age = 35) to my_table";
+    auto insert_response3 = db.execute(insert_query3);
+    if (!insert_response3->getStatus()) {
+        std::cerr << "Ошибка вставки данных: " << insert_response3->getMessage() << std::endl;
+        return 1;
+    }
 
+    auto table = db.getTable("my_table");
+    if (!table) {
+        std::cerr << "Таблица 'my_table' не найдена." << std::endl;
+        return 1;
+    }
 
-    if (response1->getStatus()) {
-        std::cout << "Success: " << response1->getMessage() << std::endl;
-    } else {
-        std::cout << "Error: " << response1->getMessage() << std::endl;
+    const auto& data = table->getData();
+
+    for (const auto& [key, row] : data) {
+        auto id = utils::get<int>(row, "id").value();
+        auto name = utils::get<std::string>(row, "name").value();
+        auto age = utils::get<int>(row, "age").value();
+
+        std::cout << "ID: " << id << ", Name: " << name << ", Age: " << age << std::endl;
     }
 
     return 0;

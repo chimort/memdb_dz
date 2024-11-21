@@ -1,6 +1,7 @@
 #pragma once
-//#include "Response.h"
+
 #include "Table.h"
+#include "utils.h"
 
 #include <fstream>
 #include <string>
@@ -10,11 +11,23 @@
 
 namespace memdb {
 
-class IResponse {
-public:
-    virtual ~IResponse() = default;
-    virtual bool getStatus() const = 0;
-    virtual const std::string& getMessage() const = 0;
+struct Response {
+    bool status_;
+    std::string msg_;
+    std::unordered_map<int, config::RowType> data_;
+
+    void setStatus(const bool& status) { status_ = status; }
+    void setMessage(const std::string& msg) { msg_ = msg; }
+    bool getStatus() const { return status_; }
+    const std::string& getMessage() const { return msg_; }
+
+    void setData(const std::unordered_map<int, config::RowType>& data) { data_ = data; }
+    std::unordered_map<int, config::RowType>& getData() { return data_; }
+
+    template<typename KeyType>
+    auto get(const KeyType& key) {
+        return utils::get(data_, key);
+    }
 };
 
 class Database
@@ -28,27 +41,13 @@ public:
     bool loadFromFile(const std::string& filename, const std::string& table_name);
     bool saveToFile(const std::string& filename, const std::string& table_name) const;
 
-    std::unique_ptr<IResponse> execute(const std::string_view& str);
+    std::unique_ptr<memdb::Response> execute(const std::string_view& str);
 
     std::shared_ptr<Table> getTable(const std::string& table_name);
 
 private:
     Database() = default;
     ~Database() = default;
-
-    struct Response : public IResponse {
-        bool status_;
-        std::string msg_;
-        std::unordered_map<int, config::RowType> data_;
-
-        inline void setStatus(const bool& status) { status_ = status; }
-        inline void setMessage(const std::string& msg) { msg_ = msg; }
-        inline bool getStatus() const override { return status_; }
-        inline const std::string& getMessage() const override { return msg_; }
-        
-        inline void setData(const std::unordered_map<int, config::RowType>& data) { data_ = data; }
-        virtual inline const std::unordered_map<int, config::RowType>& getData() { return data_; }
-    };
     
     std::unordered_map<std::string, std::shared_ptr<Table>> tables_;
 };
