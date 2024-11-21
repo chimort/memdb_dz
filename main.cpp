@@ -15,7 +15,7 @@ int main() {
 
 
     // Insert a record into the table
-    std::string insert_query = "insert (id = 1, name = 'Alice', age = 30) to my_table";
+    std::string insert_query = "insert (,'Alice', 30) to my_table";
     // std::string dsag = "insert (,\"vasya\", 0xdeadbeefdeadbeef) to users";
     // //std::string fdh = "insert (\nis_admin = true,\nlogin = \"admin\",\npassword_hash = 0x0000000000000000\t) to users";
     // std::string sel = "select id, login from users where is_admin || id < 10";

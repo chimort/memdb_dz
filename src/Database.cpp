@@ -92,11 +92,12 @@ std::unique_ptr<IResponse> Database::execute(const std::string_view &str)
             auto it = insert_values.find(column.name);
             if (it == insert_values.end()){ // Нет такой колонки
                 std::vector<std::string> insert2(insert_values.size());
-                int i = 0;
                 for (auto& pair : insert_values){
-                    insert2[i] = pair.second;
-                    i++;
+                    if (pair.second != ""){
+                        insert2[std::stoi(pair.first)] = pair.second;
+                    }
                 }
+
                 success = table->insertRecord(insert2);
             } else {
                 success = table->insertRecord(insert_values);
