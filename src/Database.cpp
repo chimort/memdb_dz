@@ -56,7 +56,7 @@ bool Database::saveToFile(const std::string& filename, const std::string& table_
     return true;
 }
 
-std::unique_ptr<IResponse> Database::execute(const std::string_view &str)
+std::unique_ptr<Response> Database::execute(const std::string_view &str)
 {
     std::string query = {str.begin(), str.end()};
     parser::QueryParser parser(query);
