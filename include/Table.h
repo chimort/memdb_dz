@@ -36,6 +36,7 @@ public:
     bool insertRecord(const std::vector<std::string>& insert_values);
 
     inline const std::unordered_map<int, config::RowType>& getData() const { return data_; }
+    inline const std::vector<config::ColumnSchema>& getSchema() const { return schema_; }
 
     bool saveToCSV(std::ofstream& ofs) const;
     bool loadFromCSV(std::istream& is);
