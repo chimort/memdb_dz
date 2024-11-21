@@ -1,9 +1,4 @@
-//
-// Created by kait on 11/20/24.
-//
-
-#ifndef MEMDB_DZ_WHEREPARSER_H
-#define MEMDB_DZ_WHEREPARSER_H
+#pragma once
 #include <map>
 #include <vector>
 #include <cstdint>
@@ -14,14 +9,11 @@
 #include <sstream>
 #include <iostream>
 #include <unordered_map>
-
-using BitString = std::vector<uint8_t>;
-using ColumnValue = std::variant<int, std::string, bool, BitString, std::monostate>;
-using RowType = std::unordered_map<std::string, ColumnValue>;
+#include "Config.h"
 
 class Statement {
 public:
-    virtual std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const = 0;
+    virtual std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const = 0;
 
     virtual ~Statement() = default;
 };
@@ -31,7 +23,7 @@ class Combine : public Statement {
 public:
     Combine(std::shared_ptr<Statement> l, std::shared_ptr<Statement> r): left(l), right(r) {}
 
-    virtual std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    virtual std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
         return right->apply(std::move(left->apply(std::move(in))));
     }
 
@@ -41,16 +33,16 @@ private:
 
 class SpaceOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
         return in;
     }
 };
 
 class PlusOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        ColumnValue a = in[in.size() - 1];
-        ColumnValue b = in[in.size() - 2];
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
 
         if(std::holds_alternative<int>(a) && std::holds_alternative<int>(b)){
             in.pop_back();
@@ -104,9 +96,9 @@ public:
 
 class MinusOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        ColumnValue a = in[in.size() - 1];
-        ColumnValue b = in[in.size() - 2];
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
 
         if(std::holds_alternative<int>(a) && std::holds_alternative<int>(b)){
             in.pop_back();
@@ -142,9 +134,9 @@ public:
 
 class MultiplicationOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        ColumnValue a = in[in.size() - 1];
-        ColumnValue b = in[in.size() - 2];
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
 
         if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
             in.pop_back();
@@ -172,9 +164,9 @@ public:
 
 class DivisionOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        ColumnValue a = in[in.size() - 1];
-        ColumnValue b = in[in.size() - 2];
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
 
         if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
             in.pop_back();
@@ -210,9 +202,9 @@ public:
 
 class RemainOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        ColumnValue a = in[in.size() - 1];
-        ColumnValue b = in[in.size() - 2];
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
 
         if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
             in.pop_back();
@@ -248,17 +240,17 @@ public:
 
 class LenOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        ColumnValue a = in[in.size() - 1];
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
 
         if(std::holds_alternative<std::string>(a)){
             in.pop_back();
             in.emplace_back(int(std::get<std::string>(a).size()));
         }
 
-        else if(std::holds_alternative<BitString>(a)){
+        else if(std::holds_alternative<config::BitString>(a)){
             in.pop_back();
-            in.emplace_back(int(std::get<BitString>(a).size()));
+            in.emplace_back(int(std::get<config::BitString>(a).size()));
         }
 
         else if(std::holds_alternative<std::monostate>(a)){
@@ -266,138 +258,569 @@ public:
             in.emplace_back(0);
         }
         else{
-            //сообщает об ошибке
+            std::cout << "error of type";
         }
 
         return in;
     }
 };
-/*
-class SpaceOp : public Statement {
+
+class BOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) > std::get<int>(a));
+        } else if (std::holds_alternative<int>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(0 > std::get<int>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) > 0);
+        }
+
+        else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) > std::get<std::string>(a));
+        } else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back("" > std::get<std::string>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) > "");
+        }
+
+        else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<config::BitString>(b) > std::get<config::BitString>(a));
+        } else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(temp > std::get<config::BitString>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(std::get<config::BitString>(b) > temp);
+        }
+
+        else if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) > std::get<bool>(a));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false > std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) > false);
+        }
+
+        else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class LOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) < std::get<int>(a));
+        } else if (std::holds_alternative<int>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(0 < std::get<int>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) < 0);
+        }
+
+        else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) < std::get<std::string>(a));
+        } else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back("" < std::get<std::string>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) < "");
+        }
+
+        else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<config::BitString>(b) < std::get<config::BitString>(a));
+        } else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(temp < std::get<config::BitString>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(std::get<config::BitString>(b) < temp);
+        }
+
+        else if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) < std::get<bool>(a));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false < std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) < false);
+        }
+
+        else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class EOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) == std::get<int>(a));
+        } else if (std::holds_alternative<int>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(0 == std::get<int>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) == 0);
+        }
+
+        else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) == std::get<std::string>(a));
+        } else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back("" == std::get<std::string>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) == "");
+        }
+
+        else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<config::BitString>(b) == std::get<config::BitString>(a));
+        } else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(temp == std::get<config::BitString>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(std::get<config::BitString>(b) == temp);
+        }
+
+        else if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) == std::get<bool>(a));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false == std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) == false);
+        }
+
+        else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class BEOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) >= std::get<int>(a));
+        } else if (std::holds_alternative<int>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(0 >= std::get<int>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) >= 0);
+        }
+
+        else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) >= std::get<std::string>(a));
+        } else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back("" >= std::get<std::string>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) >= "");
+        }
+
+        else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<config::BitString>(b) >= std::get<config::BitString>(a));
+        } else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(temp >= std::get<config::BitString>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(std::get<config::BitString>(b) >= temp);
+        }
+
+        else if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) >= std::get<bool>(a));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false >= std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) >= false);
+        }
+
+        else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class LEOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) <= std::get<int>(a));
+        } else if (std::holds_alternative<int>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(0 <= std::get<int>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) <= 0);
+        }
+
+        else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) <= std::get<std::string>(a));
+        } else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back("" <= std::get<std::string>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) <= "");
+        }
+
+        else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<config::BitString>(b) <= std::get<config::BitString>(a));
+        } else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(temp <= std::get<config::BitString>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(std::get<config::BitString>(b) <= temp);
+        }
+
+        else if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) <= std::get<bool>(a));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false <= std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) <= false);
+        }
+
+        else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class NEOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) != std::get<int>(a));
+        } else if (std::holds_alternative<int>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(0 != std::get<int>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<int>(b) != 0);
+        }
+
+        else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) != std::get<std::string>(a));
+        } else if (std::holds_alternative<std::string>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back("" != std::get<std::string>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::string>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<std::string>(b) != "");
+        }
+
+        else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<config::BitString>(b) != std::get<config::BitString>(a));
+        } else if (std::holds_alternative<config::BitString>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(temp != std::get<config::BitString>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<config::BitString>(b)) {
+            in.pop_back();
+            in.pop_back();
+            std::vector<uint8_t> temp;
+            in.emplace_back(std::get<config::BitString>(b) != temp);
+        }
+
+        else if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) != std::get<bool>(a));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false !=  std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(b) != false);
+        }
+
+        else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class NotOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+
+        if (std::holds_alternative<bool>(a)) {
+            in.pop_back();
+            in.emplace_back(!std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a)) {
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class AndOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(a) && std::get<bool>(b));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false);
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false);
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::monostate());
+        } else {
+            std::cout << "error of type";
+        }
+
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class OrOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(a) || std::get<bool>(b));
+        } else if (std::holds_alternative<std::monostate>(a) || std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(true);
+        } else {
+            std::cout << "error of type";
+        }
+
         return in;
     }
 };
 
-class SpaceOp : public Statement {
+class XorOp : public Statement {
 public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
+        config::ColumnValue a = in[in.size() - 1];
+        config::ColumnValue b = in[in.size() - 2];
+
+        if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(std::get<bool>(a) ^ std::get<bool>(b));
+        } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(!std::get<bool>(a));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<int>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(!std::get<bool>(b));
+        } else if (std::holds_alternative<std::monostate>(a) && std::holds_alternative<std::monostate>(b)) {
+            in.pop_back();
+            in.pop_back();
+            in.emplace_back(false);
+        } else {
+            std::cout << "error of type";
+        }
+
         return in;
     }
 };
 
-class SpaceOp : public Statement {
-public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        return in;
-    }
-};
-
-class SpaceOp : public Statement {
-public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        return in;
-    }
-};
-
-class SpaceOp : public Statement {
-public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        return in;
-    }
-};
-
-class SpaceOp : public Statement {
-public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        return in;
-    }
-};
-
-class SpaceOp : public Statement {
-public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        return in;
-    }
-};
-
-class SpaceOp : public Statement {
-public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        return in;
-    }
-};
-
-class SpaceOp : public Statement {
-public:
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
-        return in;
-    }
-};
-*/
 class ConstOp : public Statement {
 public:
-    ConstOp(ColumnValue val, int preced): val(val), preced(preced) {};
-    std::vector<ColumnValue> apply(std::vector<ColumnValue> in) const override {
+    ConstOp(config::ColumnValue val, int preced): val(val), preced(preced) {};
+    std::vector<config::ColumnValue> apply(std::vector<config::ColumnValue> in) const override {
         if(preced != -1){
-            ColumnValue a = in[preced];
+            config::ColumnValue a = in[preced];
             in.push_back(a);
         }else{
             in.push_back(val);
@@ -406,7 +829,7 @@ public:
         return in;
     }
 private:
-    ColumnValue val;
+    config::ColumnValue val;
     int preced;
 };
 
@@ -415,12 +838,45 @@ std::shared_ptr<Statement> operator|(std::shared_ptr<Statement> lhs, std::shared
 }
 
 bool isNum(const std::string& str){
-    for(int i = 0; i < str.size(); ++i){
-        if(str[i]-'0' < 0 || str[i] - '0' > 9){
+    if(str[0] != '+' && str[0] != '-' && (str[0]-'0' < 0 || str[0] - '9' > 0)){
+        return false;
+    }
+    for(int i = 1; i < str.size(); ++i){
+        if(str[i]-'0' < 0 || str[i] - '9' > 0){
             return false;
         }
     }
     return true;
+}
+
+bool isBool(const std::string& str){
+    if(str == "true" || str == "false"){
+        return true;
+    }
+    return false;
+}
+
+bool isStr(const std::string& str){
+    if(str.size() > 1){
+        if(str.front() == '\"' && str.back() == '\"'){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool isBitString(const std::string& str){
+    if(str.size() > 1){
+        if(str.front() == '0' && str[1] == 'x'){
+            for(int i = 2 ; i < str.size(); ++i){
+                if((str[i] - '0' < 0 || str[i] - '9' > 0) && (str[i] - 'A' < 0 || str[i] - 'F' > 0)){
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+    return false;
 }
 
 std::shared_ptr<Statement> compile(const std::vector<std::string>& query, std::vector<std::string>& column_name)
@@ -449,12 +905,41 @@ std::shared_ptr<Statement> compile(const std::vector<std::string>& query, std::v
         else if(stmt == "|"){
             ptr = std::make_shared<LenOp>();
         }
-        else if(stmt[0] == '+' || stmt[0] == '-') {
-            ptr = std::make_shared<ConstOp>(atoi(stmt.c_str()), -1);
+        else if(stmt == ">"){
+            ptr = std::make_shared<BOp>();
+        }
+        else if(stmt == "<"){
+            ptr = std::make_shared<LOp>();
+        }
+        else if(stmt == "="){
+            ptr = std::make_shared<EOp>();
+        }
+        else if(stmt == ">="){
+            ptr = std::make_shared<BEOp>();
+        }
+        else if(stmt == "<="){
+            ptr = std::make_shared<LEOp>();
+        }
+        else if(stmt == "!="){
+            ptr = std::make_shared<NEOp>();
         }
         else if(isNum(stmt)){
             ptr = std::make_shared<ConstOp>(atoi(stmt.c_str()), -1);
-        }else{
+        }
+        else if(isStr(stmt)){
+            ptr = std::make_shared<ConstOp>(stmt.substr(1, stmt.size() - 2), -1);
+        }
+        else if(isBool(stmt)){
+            ptr = std::make_shared<ConstOp>(stmt == "true", -1);
+        }
+        else if(isBitString(stmt)){
+            config::BitString new_stmt(stmt.size()-2);
+            for(int j = 2 ; j < stmt.size(); ++j){
+                new_stmt[j-2] = stmt[j];
+            }
+            ptr = std::make_shared<ConstOp>(new_stmt, -1);
+        }
+        else{
             ptr = std::make_shared<ConstOp>(std::monostate(), preced);
             column_name.push_back(stmt);
             ++preced;
@@ -562,37 +1047,3 @@ std::shared_ptr<Statement> parse_where(const std::string& str, std::vector<std::
     auto temp = infixToPostfix(v);
     return compile(temp, column_name);
 }
-/*
-int main(){
-    std::string s("( ( x + 7 ) * 4 - ( 19 - 2 * y ) ) * 10 - ( a + 100 )");
-    RowType ip;
-    ip["x"] = 5;
-    ip["a"] = std::monostate();
-    ip["y"] = 2;
-    std::vector<std::string> column_name;
-    auto temp = parse_where(s, column_name);
-    std::vector<ColumnValue> statement (column_name.size());
-    for(int i = 0; i < column_name.size(); ++i){
-        statement[i] = ip[column_name[i]];
-    }
-    auto ans = temp ->apply(statement);
-    for(int i = 0 ; i < ans.size(); ++i){
-        if(std::holds_alternative<int>(ans[i])){
-            std::cout << std::get<int>(ans[i]) << " ";
-        }else if(std::holds_alternative<std::string>(ans[i])){
-            std::cout << std::get<std::string>(ans[i]) << " ";
-        }else if(std::holds_alternative<bool>(ans[i])){
-            std::cout << std::get<bool>(ans[i]) << " ";
-        }else if(std::holds_alternative<BitString >(ans[i])){
-            auto t = std::get<BitString>(ans[i]);
-            for(int j = 0; j < t.size(); ++j){
-                std::cout << t[j];
-            }
-            std::cout << " ";
-        }else{
-            std::cout << "NON ";
-        }
-    }
-}
- */
-#endif //MEMDB_DZ_WHEREPARSER_H
