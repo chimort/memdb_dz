@@ -56,7 +56,7 @@ bool Database::saveToFile(const std::string& filename, const std::string& table_
     return true;
 }
 
-std::unique_ptr<IResponse> Database::execute(const std::string_view &str)
+std::unique_ptr<Response> Database::execute(const std::string_view &str)
 {
     std::string query = {str.begin(), str.end()};
     parser::QueryParser parser(query);
@@ -83,11 +83,26 @@ std::unique_ptr<IResponse> Database::execute(const std::string_view &str)
                 response->setMessage("Table not found for insert");
                 return response;
             }
-            // Вот тут надо будет подшаманить, потому что у нас два метода
-            // Потому что у нас 2 метода ставки, с жестким указанием (age = 234) и просто значения
-            // В один из них передаем вектор строк, а в другой словарик
+
             auto& table = table_it->second;
-            bool success = table->insertRecord(insert_values);
+            bool success;
+
+            std::vector<config::ColumnSchema> columns = table->getSchema();
+            auto it = insert_values.find("1");
+            if (it != insert_values.end()){
+                std::vector<std::string> insert2(insert_values.size());
+                for (auto& pair : insert_values){
+                    if (pair.second != ""){
+                        insert2[std::stoi(pair.first)] = pair.second;
+                    }
+                }
+                
+                
+                success = table->insertRecord(insert2);
+            } else {
+                success = table->insertRecord(insert_values);
+            }
+
             if (success) {
                 response->setStatus(true);
                 response->setMessage("Record inserted successfully");
@@ -96,6 +111,23 @@ std::unique_ptr<IResponse> Database::execute(const std::string_view &str)
                 response->setMessage("Failed to insert record");
             }
 
+            break;
+        } case parser::CommandType::CREATE_TABLE: {
+            std::shared_ptr<Table> table = std::make_shared<Table>(parser.getCreateTableParametrs());
+            if (table == nullptr) {
+                response->setStatus(false);
+                response->setMessage("Failed create table");                
+            }
+
+            tables_[parser.getTableName()] = table;
+            if (tables_.find(parser.getTableName()) == tables_.end()){
+                response->setStatus(false);
+                response->setMessage("Failed load table in db");  
+            } else {
+                response->setStatus(true);
+                response->setMessage("Table created successfully");                 
+            }
+            
             break;
         }
         // Handle other command types if needed
