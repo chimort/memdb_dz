@@ -2,24 +2,72 @@
 #include <iostream>
 
 int main() {
-    memdb::Database &db = memdb::Database::getInstance();
+    memdb::Database& db = memdb::Database::getInstance();
 
-    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false)";
+    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
     db.execute(create_table_query);
+    db.execute(R"(insert (login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)");
+    db.execute(R"(insert (login = "Bob", age = 30, mom = "Martha", is_parent = true) to users)");
+    db.execute(R"(insert (login = "Carol", password_hash = 0x3333333333333333, is_admin = false, age = 22, is_parent = false) to users)");
+    db.execute(R"(insert (login = "Dave", password_hash = 0x4444444444444444, is_admin = true, age = 35, mom = "Sara", is_parent = true) to users)");
+    db.execute(R"(insert (login = "Eve", password_hash = 0x5555555555555555, is_admin = false, mom = "Nancy", is_parent = false) to users)");
+    db.execute(R"(insert (login = "Frank", is_admin = true, age = 40) to users)");
+    db.execute(R"(insert (login = "Grace", password_hash = 0x7777777777777777, is_admin = false, age = 29, mom = "Judy", is_parent = true) to users)");
+    db.execute(R"(insert (password_hash = 0x8888888888888888, is_admin = true, mom = "Eve", is_parent = false) to users)");
+    db.execute(R"(insert (login = "Ivy", password_hash = 0x9999999999999999, is_admin = false, age = 23, mom = "Helen", is_parent = true) to users)");
+    db.execute(R"(insert (login = "Jack", password_hash = 0xAAAAAAAAAAAAAAAA, is_admin = true, age = 31, mom = "Diane") to users)");
 
-    db.execute(R"(insert (login = "Alice", password_hash = 0xdeadbeefdeadbeef) to users)");
-    db.execute(R"(insert (login = "Bob", password_hash = 0xdeadbeefdeadbeef) to users)");
+    std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where id % 2 = 1 && ( | login | < 7 || | mom | < 0 ) && ( is_admin = true )";
+    auto select_response_2 = db.execute(select_query_2);
+    const auto& data_2 = select_response_2->getData();
 
-    std::string select_query = "select id, login from users where id = 2";
-    auto select_response = db.execute(select_query);
+    for (const auto& [key, row] : data_2) {
+        int id;
+        std::string login;
+        std::string mom;
+        bool is_admin;
+        bool is_parent;
 
-    std::cout << "status: "<< select_response->getStatus() << std::endl;
+        if (std::holds_alternative<int>(row.at("id"))) {
+            id = std::get<int>(row.at("id"));
+        } else {
+            id = NULL;
+        }
+        if (std::holds_alternative<std::string>(row.at("login"))) {
+            login = std::get<std::string>(row.at("login"));
+        } else {
+            login = "Non";
+        }
+        if (std::holds_alternative<std::string>(row.at("mom"))) {
+            mom = std::get<std::string>(row.at("mom"));
+        } else {
+            mom = "Non";
+        }
+        if (std::holds_alternative<bool>(row.at("is_admin"))) {
+            is_admin = std::get<bool>(row.at("is_admin"));
+        } else {
+            is_admin = false;
+        }
+        if (std::holds_alternative<bool>(row.at("is_parent"))) {
+            is_parent = std::get<bool>(row.at("is_parent"));
+        } else {
+            is_parent = false;
+        }
 
-    const auto &data = select_response->getData();
-    std::cout << "size: " << data.size() << std::endl ;
-
-    auto row2 = data.at(0);
-    std::cout << "login: " << std::get<std::string>(row2["login"]) << std::endl;
+        std::cout << "\n\nid: " << id;
+        std::cout << "\nlogin: " << login;
+        std::cout << "\nmom: " << mom;
+        if (is_admin) {
+            std::cout << "\nis_admin: true";
+        } else {
+            std::cout << "\nis_admin: false";
+        }
+        if (is_parent) {
+            std::cout << "\nis_parent: true";
+        } else {
+            std::cout << "\nis_parent: false";
+        }
+    }
     return 0;
 }
     /*

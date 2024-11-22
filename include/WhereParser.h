@@ -793,7 +793,7 @@ public:
         if (std::holds_alternative<bool>(a) && std::holds_alternative<bool>(b)) {
             in.pop_back();
             in.pop_back();
-            in.emplace_back(std::get<bool>(a) ^ std::get<bool>(b));
+            in.emplace_back(bool(std::get<bool>(a) ^ std::get<bool>(b)));
         } else if (std::holds_alternative<bool>(a) && std::holds_alternative<std::monostate>(b)) {
             in.pop_back();
             in.pop_back();
