@@ -181,16 +181,29 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
             return false;
         }
         case config::ColumnType::STRING: {
-            if (value_str.size() > column_schema.max_size) {
-                return false; // Превышен максимальный размер строки
+            std::string temp_value = value_str;
+
+            if (temp_value.size() >= 2 && temp_value.front() == '"' && temp_value.back() == '"') {
+                temp_value = temp_value.substr(1, temp_value.size() - 2);
+
+                size_t pos = 0;
+                while ((pos = temp_value.find("\\\"", pos)) != std::string::npos) {
+                    temp_value.replace(pos, 2, "\"");
+                    pos += 1;
+                }
             }
-            out_value = value_str;
+
+            if (temp_value.size() > column_schema.max_size) {
+                return false;
+            }
+
+            out_value = temp_value;
             return true;
         }
         case config::ColumnType::BITSTRING: {
             if (value_str.size() > 2 && value_str[0] == '0' && (value_str[1] == 'x' || value_str[1] == 'X')) {
                 std::string hex_str = value_str.substr(2);
-                if (hex_str.empty() || hex_str.size() % 2 != 0) {
+                if (hex_str.empty() || hex_str.size() % 2 != 0 || (hex_str.size() > column_schema.max_size * 2)) {
                     return false;
                 }
                 config::BitString bit_string;
