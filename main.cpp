@@ -32,7 +32,7 @@ int main() {
         return 1;
     }
 
-    std::string insert_query1 = "insert (id = 1, name = 'Alice', age = 30) to my_table";
+    std::string insert_query1 = "insert (, 'Alice', 30) to my_table";
     auto insert_response1 = db.execute(insert_query1);
     if (!insert_response1->getStatus()) {
         std::cerr << "Ошибка вставки данных: " << insert_response1->getMessage() << std::endl;
@@ -62,11 +62,17 @@ int main() {
     const auto& data = table->getData();
 
     for (const auto& [key, row] : data) {
-        auto id = utils::get<int>(row, "id").value();
+        auto id_optional = utils::get<int>(row, "id");
+        if (id_optional.has_value()){
+            auto id = id_optional.value();
+            std::cout << "ID: " << id << " ";
+        } else {
+            std::cout << "ID: NULL ";
+        }
         auto name = utils::get<std::string>(row, "name").value();
         auto age = utils::get<int>(row, "age").value();
 
-        std::cout << "ID: " << id << ", Name: " << name << ", Age: " << age << std::endl;
+        std::cout << "Name: " << name << ", Age: " << age << std::endl;
     }
 
     return 0;

@@ -89,21 +89,20 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             bool success;
 
             std::vector<config::ColumnSchema> columns = table->getSchema();
-            config::ColumnSchema column = columns[0];
-            auto it = insert_values.find(column.name);
-            if (it == insert_values.end()){ // Нет такой колонки
+            auto it = insert_values.find("1");
+            if (it != insert_values.end()){
                 std::vector<std::string> insert2(insert_values.size());
                 for (auto& pair : insert_values){
                     if (pair.second != ""){
                         insert2[std::stoi(pair.first)] = pair.second;
                     }
                 }
-
+                
+                
                 success = table->insertRecord(insert2);
             } else {
                 success = table->insertRecord(insert_values);
             }
-
 
             if (success) {
                 response->setStatus(true);
