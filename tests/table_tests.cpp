@@ -24,7 +24,7 @@ TEST_F(TableTest, InsertWithColumnNames) {
 
     std::unordered_map<std::string, std::string> insert_values = {
         {"id", "1"},
-        {"name", "Alice"},
+        {"name", "\"Alice\""},
         {"age", "30"},
         {"active", "true"}
     };
@@ -76,7 +76,7 @@ TEST_F(TableTest, InsertWithoutColumnNames) {
 
     std::vector<std::string> insert_values = {
         "2",       // id
-        "Bob",     // name
+        "\"Bob\"",     // name
         "25",      // age
         "false"    // active
     };
@@ -130,7 +130,7 @@ TEST_F(TableTest, InsertWithMissingValues) {
 
     std::unordered_map<std::string, std::string> insert_values = {
         {"id", "3"},
-        {"name", "Charlie"}
+        {"name", "\"Charlie\""}
         // Отсутствуют "age" и "active"
     };
 
@@ -334,7 +334,7 @@ TEST_F(TableTest, InsertWithBitStringValues) {
     std::unordered_map<std::string, std::string> insert_values = {
         {"id", "10"},
         {"data1", "0xDEADBEEF"},
-        {"description", "Test description"}
+        {"description", "\"Test description\""}
         // Колонка "data2" не указана и должна получить значение NULL
     };
 
@@ -610,14 +610,14 @@ TEST_F(TableTest, AutoIncrementAttributeInsertTest) {
 
     // Вставляем первую запись
     std::unordered_map<std::string, std::string> insert_values1 = {
-        {"name", "First Record"}
+        {"name", "\"First Record\""}
     };
     EXPECT_TRUE(table.insertRecord(insert_values1));
     std::cout << "Inserted: {name: \"First Record\"}" << std::endl;
 
     // Вставляем вторую запись
     std::unordered_map<std::string, std::string> insert_values2 = {
-        {"name", "Second Record"}
+        {"name", "\"Second Record\""}
     };
     EXPECT_TRUE(table.insertRecord(insert_values2));
     std::cout << "Inserted: {name: \"Second Record\"}" << std::endl;
@@ -648,7 +648,7 @@ TEST_F(TableTest, UserDefaultValueTest) {
     // Определяем схему таблицы с default_value
     std::vector<config::ColumnSchema> columns = {
         {"id", config::ColumnType::INT, 0, {1, 1, 1}},               // Поле с autoincrement, unique, key
-        {"status", config::ColumnType::STRING, 20, {0, 0, 0}, "active"}, // Поле с default_value "active"
+        {"status", config::ColumnType::STRING, 20, {0, 0, 0}, "\"active\""}, // Поле с default_value "active"
         {"priority", config::ColumnType::INT, 0, {0, 0, 0}, "5"},        // Поле с default_value 5
         {"description", config::ColumnType::STRING, 255, {0, 0, 0}}  // Поле без default_value
     };
@@ -656,7 +656,7 @@ TEST_F(TableTest, UserDefaultValueTest) {
 
     // Вставляем запись без указания 'status' и 'priority'
     std::unordered_map<std::string, std::string> record = {
-        {"description", "Test record"}
+        {"description", "\"Test record\""}
     };
     EXPECT_TRUE(table.insertRecord(record));
 
@@ -680,7 +680,7 @@ TEST_F(TableTest, UserDefaultValueTest) {
 
     // Вставляем вторую запись без указания 'description'
     std::unordered_map<std::string, std::string> record2 = {
-        {"status", "inactive"}
+        {"status", "\"inactive\""}
     };
     EXPECT_TRUE(table.insertRecord(record2));
 
@@ -711,22 +711,22 @@ TEST_F(TableTest, AutoincrementUniqueFieldsTest) {
 
     // Вставляем первую запись
     std::unordered_map<std::string, std::string> record1 = {
-        {"regular_field", "Value1"},
-        {"unique_field", "Unique1"}
+        {"regular_field", "\"Value1\""},
+        {"unique_field", "\"Unique1\""}
     };
     EXPECT_TRUE(table.insertRecord(record1));
 
     std::unordered_map<std::string, std::string> record3 = {
-        {"regular_field", "Value2"},
+        {"regular_field", "\"Value2\""},
         {"auto_field1", "1234"},
-        {"unique_field", "Unique3"}
+        {"unique_field", "\"Unique3\""}
     };
     EXPECT_TRUE(table.insertRecord(record3));
 
     // Вставляем вторую запись
     std::unordered_map<std::string, std::string> record2 = {
-        {"regular_field", "Value2"},
-        {"unique_field", "Unique2"}
+        {"regular_field", "\"Value2\""},
+        {"unique_field", "\"Unique2\""}
     };
     EXPECT_TRUE(table.insertRecord(record2));
 

@@ -33,7 +33,7 @@ TEST_F(TableSaveLoadTest, SaveAndLoadTableDataIntegrity) {
     // Шаг 2: Вставляем данные в таблицу
     std::unordered_map<std::string, std::string> record1 = {
         {"id", "1"},
-        {"name", "Alice"},
+        {"name", "\"Alice\""},
         {"age", "30"},
         {"active", "true"},
         {"data", "0xDEADBEEF"}
@@ -42,7 +42,7 @@ TEST_F(TableSaveLoadTest, SaveAndLoadTableDataIntegrity) {
 
     std::unordered_map<std::string, std::string> record2 = {
         {"id", "2"},
-        {"name", "Bob, the \"Builder\"\nNew Line"},
+        {"name", "\"Bob, the \"Builder\"\nNew Line\""},
         {"age", "25"},
         {"active", "false"},
         {"data", "0xBAADF00D"}
@@ -107,7 +107,7 @@ TEST_F(TableSaveLoadTest, SaveAndLoadTableWithVariousDataTypes) {
     // Вставляем записи с разными данными
     std::unordered_map<std::string, std::string> record1 = {
         {"id", "100"},
-        {"description", "Test record"},
+        {"description", "\"Test record\""},
         {"is_valid", "true"},
         {"raw_data", "0x1234567890ABCDEF"}
     };
@@ -115,7 +115,7 @@ TEST_F(TableSaveLoadTest, SaveAndLoadTableWithVariousDataTypes) {
 
     std::unordered_map<std::string, std::string> record2 = {
         {"id", "101"},
-        {"description", "Another record with a long description exceeding max size"},
+        {"description", "\"Another record with a long description exceeding max size\""},
         {"is_valid", "false"},
         {"raw_data", "0xFEDCBA0987654321"}
     };
@@ -190,7 +190,7 @@ TEST_F(TableInsertMissingValuesTest, InsertRecordWithMissingValues) {
     // Вставляем запись с отсутствующими значениями для 'age' и 'active'
     std::unordered_map<std::string, std::string> insert_values = {
         {"id", "3"},
-        {"name", "Charlie"}
+        {"name", "\"Charlie\""}
         // Поля 'age' и 'active' отсутствуют и должны получить значение NULL
     };
 
@@ -293,7 +293,7 @@ TEST_F(TableCSVInsertTest, LoadCSVAndInsertRecord) {
 
     // Шаг 3: Вставляем новую запись без указания 'id'
     std::unordered_map<std::string, std::string> new_record = {
-        {"name", "Charlie"},
+        {"name", "\"Charlie\""},
         {"age", "28"},
         {"active", "true"}
     };
