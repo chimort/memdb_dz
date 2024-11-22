@@ -97,6 +97,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                     }
                 }
                 
+                
                 success = table->insertRecord(insert2);
             } else {
                 success = table->insertRecord(insert_values);
