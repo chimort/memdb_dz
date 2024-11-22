@@ -152,6 +152,11 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                     }
                 }
             }
+            if(new_schema.size() != selected_columns.size()){
+                response->setStatus(false);
+                response->setMessage("selected_columns not found for select");
+                break;
+            }
             Table new_Table(new_schema);
 
             auto condition = parser.getCondition();
@@ -179,7 +184,9 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                     new_Table.insertRowType(new_row);
                 }
             }
+            response->setStatus(true);
             response->setData(new_Table.getData());
+            break;
         }
 
         // Handle other command types if needed

@@ -20,7 +20,6 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     }
 
     config::RowType row;
-    int id_value = -1;
 
     for (const auto& [column_name, value_str] : insert_values) {
         auto schema_it = std::find_if(schema_.begin(), schema_.end(),
@@ -76,19 +75,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
 
     // Обновляем id
     int id;
-    if (id_value == -1) {
-        id = next_id_++;
-    } else {
-        id = id_value;
-
-        if (data_.find(id) != data_.end()) {
-            return false; // Запись с данным 'id' уже существует
-        }
-
-        if (id >= next_id_) {
-            next_id_ = id + 1;
-        }
-    }
+    id = next_id_++;
 
     data_[id] = row;
     indexRow(id, row);
@@ -104,7 +91,6 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     config::RowType row;
     size_t num_columns = schema_.size();
     size_t num_values = insert_values.size();
-    int id_value = -1;
 
     for (size_t i = 0; i < num_values; ++i) {
         size_t schema_index = num_columns - num_values + i;
@@ -154,19 +140,7 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     }
 
     int id;
-    if (id_value == -1) {
-        id = next_id_++;
-    } else {
-        id = id_value;
-
-        if (data_.find(id) != data_.end()) {
-            return false; // Запись с данным 'id' уже существует
-        }
-
-        if (id >= next_id_) {
-            next_id_ = id + 1;
-        }
-    }
+    id = next_id_++;
 
     data_[id] = row;
     return true;

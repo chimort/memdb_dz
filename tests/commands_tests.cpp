@@ -1,34 +1,52 @@
 #include <gtest/gtest.h>
 #include "Database.h"
 
-class WhereTests : public ::testing::Test{
+class DatabaseTest : public ::testing::Test {
+protected:
+    memdb::Database& db = memdb::Database::getInstance();
 };
 
-TEST_F(WhereTests, Condition) {
-    memdb::Database& db = memdb::Database::getInstance();
-    auto response = db.execute("cReAtE tAbLe users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false");
-    EXPECT_TRUE(response->getStatus());
-    db.execute("InSeRt (\n"
-               "is_admin = false,\n"
-               "login = \"vasya\",\n"
-               "password_hash = 0x0000000000000001\n"
-               ") to users");
-    db.execute("InSeRt (\n"
-               "is_admin = true,\n"
-               "login = \"admin\",\n"
-               "password_hash = 0x0000000000000000\n"
-               ") to users");
-    db.execute("InSeRt (\n"
-               "is_admin = false,\n"
-               "login = \"petya\",\n"
-               ") to users");
-    auto response_sel = db.execute("select login, is_admin from users wHerE password_hash > 0x0000000000000000");
-    bool f = true;
-    const auto& data = response->getData();
-    for (const auto& [key, row] : data) {
-        auto login = utils::get<std::string>(row, "login").value();
-        auto is_admin = utils::get<bool>(row, "is_admin").value();
+TEST_F(DatabaseTest, CreateTable) {
+    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false)";
+    auto response = db.execute(create_table_query);
 
-        std::cout << "login: " << login << ", is_admin: \n" << is_admin;
-    }
+    EXPECT_TRUE(response->getStatus());
+    EXPECT_EQ(response->getMessage(), "Table created successfully");
+
+    auto table = db.getTable("users");
+    EXPECT_NE(table, nullptr);
+}
+
+TEST_F(DatabaseTest, InsertRecords) {
+    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false)";
+    db.execute(create_table_query);
+
+    std::string insert_query1 = R"(insert (id = 1, login = "Alice", password_hash = 0xdeadbeefdeadbeef) to users)";
+    auto insert_response1 = db.execute(insert_query1);
+    EXPECT_TRUE(insert_response1->getStatus());
+
+    std::string insert_query2 = R"(insert (id = 2, login = "Bob", password_hash = 0xdeadbeefdeadbeef) to users)";
+    auto insert_response2 = db.execute(insert_query2);
+    EXPECT_TRUE(insert_response2->getStatus());
+}
+
+TEST_F(DatabaseTest, SelectData) {
+    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false)";
+    db.execute(create_table_query);
+
+    db.execute(R"(insert (id = 1, login = "Alice", password_hash = 0xdeadbeefdeadbeef) to users)");
+    db.execute(R"(insert (id = 2, login = "Bob", password_hash = 0xdeadbeefdeadbeef) to users)");
+
+    std::string select_query = "select id, login from users where id = 2";
+    auto select_response = db.execute(select_query);
+
+    EXPECT_TRUE(select_response->getStatus());
+
+    const auto& data = select_response->getData();
+    ASSERT_EQ(data.size(), 1);
+    //auto row1 = data.at(1);
+    //EXPECT_EQ(std::get<int>(row1["id"]), 1);
+   // EXPECT_EQ(std::get<std::string>(row1["login"]), R"("Alice")");
+    auto row2 = data.at(0);
+    EXPECT_EQ(std::get<std::string>(row2["login"]), R"("Bob")");
 }

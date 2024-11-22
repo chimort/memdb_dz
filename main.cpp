@@ -2,6 +2,27 @@
 #include <iostream>
 
 int main() {
+    memdb::Database &db = memdb::Database::getInstance();
+
+    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false)";
+    db.execute(create_table_query);
+
+    db.execute(R"(insert (login = "Alice", password_hash = 0xdeadbeefdeadbeef) to users)");
+    db.execute(R"(insert (login = "Bob", password_hash = 0xdeadbeefdeadbeef) to users)");
+
+    std::string select_query = "select id, login from users where id = 2";
+    auto select_response = db.execute(select_query);
+
+    std::cout << "status: "<< select_response->getStatus() << std::endl;
+
+    const auto &data = select_response->getData();
+    std::cout << "size: " << data.size() << std::endl ;
+
+    auto row2 = data.at(0);
+    std::cout << "login: " << std::get<std::string>(row2["login"]) << std::endl;
+    return 0;
+}
+    /*
     memdb::Database& db = memdb::Database::getInstance();
 
     std::string create_table_query = "create table my_table (id : int32, name : string[32], age : int32)";
@@ -50,3 +71,4 @@ int main() {
 
     return 0;
 }
+*/
