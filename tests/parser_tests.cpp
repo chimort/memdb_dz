@@ -242,10 +242,10 @@ TEST(QueryParserTest, CreateIndexTestSimple) {
     for (const auto& [key, value] : column_index_type_){
         std::cout << "Column: " << key << " Type: ";
         switch (value) {
-        case IndexType::ORDERED:
+        case config::IndexType::ORDERED:
             std::cout << "ordered" << std::endl;
             break;
-        case IndexType::UNORDERED:
+        case config::IndexType::UNORDERED:
             std::cout << "unordered" << std::endl;
             break;
         default:
