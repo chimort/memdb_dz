@@ -203,6 +203,53 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             std::vector<std::string> column_name;
             auto Expression = parse_where(condition, column_name);
 
+            //надо будет написать проверку на выражение
+
+            std::vector<config::ColumnValue> statement(column_name.size());
+            for( auto row : table_it->second->getData()){
+                for(int i = 0; i < column_name.size(); ++i) {
+                    statement[i] = row.second[column_name[i]];
+                }
+                auto ans = Expression ->apply(statement);
+                if(std::holds_alternative<std::monostate>(ans[column_name.size()])){
+                    config::RowType new_row;
+                    for(auto name: new_schema){
+                        new_row[name.name] = row.second[name.name];
+                    }
+                    new_Table.insertRowType(new_row);
+                }else if(std::get<bool>(ans[column_name.size()])){
+                    config::RowType new_row;
+                    for(auto name: new_schema){
+                        new_row[name.name] = row.second[name.name];
+                    }
+                    new_Table.insertRowType(new_row);
+                }
+            }
+            response->setStatus(true);
+            response->setData(new_Table.getData());
+            break;
+        }
+
+        case parser::CommandType::UPDATE: {
+            auto table_name_opt = parser.getTableName();
+            const auto& assignment = parser.getUpdateValues();
+
+            const std::string table_name = table_name_opt;
+
+            auto table_it = tables_.find(table_name);
+            if (table_it == tables_.end()) {
+                response->setStatus(false);
+                response->setMessage("Table not found for select");
+                return response;
+            }
+
+            auto condition = parser.getCondition();
+
+            std::vector<std::string> column_name;
+            auto Expression = parse_where(condition, column_name);
+
+            //надо будет написать проверку на выражение
+
             std::vector<config::ColumnValue> statement(column_name.size());
             for( auto row : table_it->second->getData()){
                 for(int i = 0; i < column_name.size(); ++i) {
