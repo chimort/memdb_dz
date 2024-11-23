@@ -18,7 +18,6 @@ public:
         : schema_(columns) 
     {
         for (const auto& column : schema_) {
-            indices_[column.name] = {};
             if (column.attributes[1]) { // autoincrement
                 autoincrement_counters_[column.name] = 0;
             }
@@ -34,6 +33,8 @@ public:
     bool insertRecord(const std::unordered_map<std::string, std::string>& insert_values);
     // Метод для вставки без указания названий колонок
     bool insertRecord(const std::vector<std::string>& insert_values);
+    bool createUnorderedIndex(const std::vector<std::string>& columns_name);
+    bool fillUnordered(const int& id, const config::RowType rows);
 
     inline const std::unordered_map<int, config::RowType>& getData() const { return data_; }
     inline const std::vector<config::ColumnSchema>& getSchema() const { return schema_; }

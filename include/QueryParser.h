@@ -22,7 +22,6 @@ enum class CommandType {
     CREATE_INDEX, 
     UNKNOWN 
 };
-enum class IndexType { ORDERED, UNORDERED };
 
 class QueryParser {
 public:
@@ -37,7 +36,7 @@ public:
     inline std::unordered_map<std::string, std::string> getInsertValues() const { return insert_values_; }
     std::unordered_map<std::string, std::string> getUpdateValues() const { return update_values_; }
     inline std::vector<config::ColumnSchema> getCreateTableParametrs() const { return columns_parametrs_; };
-    inline std::unordered_map<std::string, IndexType> getCreateIndexType() const { return column_index_type_; };
+    inline std::unordered_map<std::string, config::IndexType> getCreateIndexType() const { return column_index_type_; };
 
 private:
     std::string str_;
@@ -49,7 +48,7 @@ private:
     std::unordered_map<std::string, std::string> insert_values_;
     std::unordered_map<std::string, std::string> update_values_;
     std::vector<config::ColumnSchema> columns_parametrs_;
-    std::unordered_map<std::string, IndexType> column_index_type_;
+    std::unordered_map<std::string, config::IndexType> column_index_type_;
     
     bool createTableParse();
     bool createIndexParse();
