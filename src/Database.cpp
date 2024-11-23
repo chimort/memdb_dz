@@ -97,7 +97,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                         insert2[std::stoi(pair.first)] = pair.second;
                     }
                 }
-                
+
                 
                 success = table->insertRecord(insert2);
             } else {
@@ -129,6 +129,46 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                 response->setMessage("Table created successfully");                 
             }
             
+            break;
+        } case parser::CommandType::CREATE_INDEX: {
+            auto table_name_opt = parser.getTableName();
+
+            const std::string table_name = table_name_opt;
+
+            auto table_it = tables_.find(table_name);
+            if (table_it == tables_.end()) {
+                response->setStatus(false);
+                response->setMessage("Table not found for insert");
+                return response;
+            }
+
+            auto& table = table_it->second;
+            bool success;
+
+            auto queryIndexs = parser.getCreateIndexType();
+            std::vector<config::ColumnSchema> columns = table->getSchema();
+            std::vector<std::string> columns_name;
+            bool flag = false;
+            for (auto& column : columns) {
+                for (auto& [name_column_query, queryType] : queryIndexs) {
+                    if (column.name == name_column_query) {
+                        columns_name.push_back(column.name);
+                        column.ordering = queryType;
+                        flag = true;
+                    }
+                }
+            }
+
+
+            if (!flag) {
+                response->setStatus(false);
+                response->setMessage("Compatibility colums error");
+                return response;
+            }
+
+            bool createIndex_res = table->createUnorderedIndex(columns_name);
+            
+
             break;
         }
         case parser::CommandType::SELECT: {

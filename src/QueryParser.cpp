@@ -128,11 +128,11 @@ bool QueryParser::createIndexParse() {
     table_name_ = match[2];                 // Имя таблицы
 
     // Определяем тип индекса
-    IndexType index_type;
+    config::IndexType index_type;
     if (index_type_str == "ordered") {
-        index_type = IndexType::ORDERED;
+        index_type = config::IndexType::ORDERED;
     } else if (index_type_str == "unordered") {
-        index_type = IndexType::UNORDERED;
+        index_type = config::IndexType::UNORDERED;
     } else {
         throw std::invalid_argument("Invalid index type");
     }
