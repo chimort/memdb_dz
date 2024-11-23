@@ -1,5 +1,6 @@
 #include "Database.h"
 #include "QueryParser.h"
+#include "WhereParser.h"
 
 #include <iostream>
 
@@ -170,6 +171,63 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
 
             break;
         }
+        case parser::CommandType::SELECT: {
+            auto table_name_opt = parser.getTableName();
+            const auto& selected_columns = parser.getSelectedCol();
+
+            const std::string table_name = table_name_opt;
+
+            auto table_it = tables_.find(table_name);
+            if (table_it == tables_.end()) {
+                response->setStatus(false);
+                response->setMessage("Table not found for select");
+                return response;
+            }
+            std::vector<config::ColumnSchema> new_schema;
+            for( auto old_s : table_it->second->getSchema()){
+                for ( auto new_s : selected_columns){
+                    if(old_s.name == new_s){
+                        new_schema.push_back(old_s);
+                    }
+                }
+            }
+            if(new_schema.size() != selected_columns.size()){
+                response->setStatus(false);
+                response->setMessage("selected_columns not found for select");
+                break;
+            }
+            Table new_Table(new_schema);
+
+            auto condition = parser.getCondition();
+
+            std::vector<std::string> column_name;
+            auto Expression = parse_where(condition, column_name);
+
+            std::vector<config::ColumnValue> statement(column_name.size());
+            for( auto row : table_it->second->getData()){
+                for(int i = 0; i < column_name.size(); ++i) {
+                    statement[i] = row.second[column_name[i]];
+                }
+                auto ans = Expression ->apply(statement);
+                if(std::holds_alternative<std::monostate>(ans[column_name.size()])){
+                    config::RowType new_row;
+                    for(auto name: new_schema){
+                        new_row[name.name] = row.second[name.name];
+                    }
+                    new_Table.insertRowType(new_row);
+                }else if(std::get<bool>(ans[column_name.size()])){
+                    config::RowType new_row;
+                    for(auto name: new_schema){
+                        new_row[name.name] = row.second[name.name];
+                    }
+                    new_Table.insertRowType(new_row);
+                }
+            }
+            response->setStatus(true);
+            response->setData(new_Table.getData());
+            break;
+        }
+
         // Handle other command types if needed
         default: {
             response->setStatus(false);

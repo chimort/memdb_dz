@@ -20,7 +20,6 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     }
 
     config::RowType row;
-    int id_value = -1;
 
     for (const auto& [column_name, value_str] : insert_values) {
         auto schema_it = std::find_if(schema_.begin(), schema_.end(),
@@ -84,19 +83,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
 
     // Обновляем id
     int id;
-    if (id_value == -1) {
-        id = next_id_++;
-    } else {
-        id = id_value;
-
-        if (data_.find(id) != data_.end()) {
-            return false; // Запись с данным 'id' уже существует
-        }
-
-        if (id >= next_id_) {
-            next_id_ = id + 1;
-        }
-    }
+    id = next_id_++;
     data_[id] = row;
 
 
@@ -116,7 +103,6 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     config::RowType row;
     size_t num_columns = schema_.size();
     size_t num_values = insert_values.size();
-    int id_value = -1;
 
     for (size_t i = 0; i < num_values; ++i) {
         size_t schema_index = num_columns - num_values + i;
@@ -175,19 +161,15 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     }
 
     int id;
-    if (id_value == -1) {
-        id = next_id_++;
-    } else {
-        id = id_value;
+    id = next_id_++;
 
-        if (data_.find(id) != data_.end()) {
-            return false; // Запись с данным 'id' уже существует
-        }
+    data_[id] = row;
+    return true;
+}
 
-        if (id >= next_id_) {
-            next_id_ = id + 1;
-        }
-    }
+bool Table::insertRowType(const config::RowType& row) {
+    int id;
+    id = next_id_++;
 
     data_[id] = row;
 
@@ -244,21 +226,22 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
         case config::ColumnType::BITSTRING: {
             if (value_str.size() > 2 && value_str[0] == '0' && (value_str[1] == 'x' || value_str[1] == 'X')) {
                 std::string hex_str = value_str.substr(2);
-                if (hex_str.empty() || hex_str.size() % 2 != 0 || (hex_str.size() > column_schema.max_size * 2)) {
+                if (hex_str.size() > column_schema.max_size * 2) {
                     return false;
                 }
                 config::BitString bit_string;
-                for (size_t i = 0; i < hex_str.length(); i += 2) {
-                    std::string byte_str = hex_str.substr(i, 2);
-                    uint8_t byte_value;
-                    auto [ptr_byte, ec_byte] = std::from_chars(byte_str.data(), byte_str.data() + byte_str.size(), byte_value, 16);
-                    if (ec_byte != std::errc()) {
+                auto te = column_schema.max_size * 2 - hex_str.length();
+                for(int i = 0; i < te; ++i){
+                    bit_string.push_back('0');
+                }
+                for (size_t i = 0; i < hex_str.length(); ++i) {
+                    uint8_t symb = hex_str[i];
+                    if((symb - '0' >= 0 && symb - '9' <= 0) || (std::tolower(symb) - 'a' >= 0 && std::tolower(symb) - 'f' <= 0)){
+                        bit_string.push_back(std::tolower(hex_str[i]));
+                    }
+                    else{
                         return false;
                     }
-                    bit_string.push_back(byte_value);
-                }
-                if (bit_string.size() > column_schema.max_size) {
-                    return false; // Превышен максимальный размер битовой строки
                 }
                 out_value = bit_string;
                 return true;
@@ -272,7 +255,6 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
 
 
 bool Table::createUnorderedIndex(const std::vector<std::string>& columns_name){
-    // Проверить индексы еще не существуют. Закинуть все сущ. значения сразу.
 
     for (auto& str : columns_name) {
         auto index = indices_.find(str);
@@ -287,7 +269,6 @@ bool Table::createUnorderedIndex(const std::vector<std::string>& columns_name){
 }
 
 bool Table::fillUnordered(const int& id, const config::RowType row) {
-    // Пробегаемся по всем колонкам строки, если совпала колонка с нашим индексом, то мы добавляем ее в значение.
     for (auto& [col_name, col_value] : row) {
         for (auto& col_schema : schema_)
         if (col_name == col_schema.name && col_schema.ordering == config::IndexType::UNORDERED) {
