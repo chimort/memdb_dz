@@ -1,4 +1,4 @@
-
+#pragma once
 #include "Config.h"
 
 #include<optional>
