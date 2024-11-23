@@ -128,11 +128,11 @@ bool QueryParser::createIndexParse() {
     table_name_ = match[2];                 // Имя таблицы
 
     // Определяем тип индекса
-    IndexType index_type;
+    config::IndexType index_type;
     if (index_type_str == "ordered") {
-        index_type = IndexType::ORDERED;
+        index_type = config::IndexType::ORDERED;
     } else if (index_type_str == "unordered") {
-        index_type = IndexType::UNORDERED;
+        index_type = config::IndexType::UNORDERED;
     } else {
         throw std::invalid_argument("Invalid index type");
     }
@@ -191,6 +191,8 @@ bool QueryParser::createTableParse() {
                         params.attributes[1] = 1;
                     } else if (attribute == "unique") {
                         params.attributes[0] = 1;
+                    } else{
+                        return false;
                     }
                 }
             }
@@ -261,7 +263,14 @@ bool QueryParser::insertParse() {
         if (eq_pos == std::string::npos) {
             insert_values_[std::to_string(i++)] = token;
         } else {
-            insert_values_[token.substr(0, eq_pos - 1)] = token.substr(eq_pos + 2); 
+            int i1 = 0, i2 = 0;
+            while(token[eq_pos - 1 - i1] == ' '){
+                ++i1;
+            }
+            while(token[eq_pos + 1 + i2] == ' '){
+                ++i2;
+            }
+            insert_values_[token.substr(0, eq_pos - i1)] = token.substr(eq_pos + 1 + i2);
         }
     }
 

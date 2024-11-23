@@ -1,5 +1,6 @@
 #include "Database.h"
 #include "QueryParser.h"
+#include "WhereParser.h"
 
 #include <iostream>
 #include <variant>
@@ -97,7 +98,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                         insert2[std::stoi(pair.first)] = pair.second;
                     }
                 }
-                
+
                 
                 success = table->insertRecord(insert2);
             } else {
@@ -167,7 +168,104 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             }
             response->setStatus(true);
             break;
+        } case parser::CommandType::CREATE_INDEX: {
+            auto table_name_opt = parser.getTableName();
+
+            const std::string table_name = table_name_opt;
+
+            auto table_it = tables_.find(table_name);
+            if (table_it == tables_.end()) {
+                response->setStatus(false);
+                response->setMessage("Table not found for insert");
+                return response;
+            }
+
+            auto& table = table_it->second;
+            bool success;
+
+            auto queryIndexs = parser.getCreateIndexType();
+            std::vector<config::ColumnSchema> columns = table->getSchema();
+            std::vector<std::string> columns_name;
+            bool flag = false;
+            for (auto& column : columns) {
+                for (auto& [name_column_query, queryType] : queryIndexs) {
+                    if (column.name == name_column_query) {
+                        columns_name.push_back(column.name);
+                        column.ordering = queryType;
+                        flag = true;
+                    }
+                }
+            }
+
+
+            if (!flag) {
+                response->setStatus(false);
+                response->setMessage("Compatibility colums error");
+                return response;
+            }
+
+            bool createIndex_res = table->createUnorderedIndex(columns_name);
+            
+
+            break;
         }
+        case parser::CommandType::SELECT: {
+            auto table_name_opt = parser.getTableName();
+            const auto& selected_columns = parser.getSelectedCol();
+
+            const std::string table_name = table_name_opt;
+
+            auto table_it = tables_.find(table_name);
+            if (table_it == tables_.end()) {
+                response->setStatus(false);
+                response->setMessage("Table not found for select");
+                return response;
+            }
+            std::vector<config::ColumnSchema> new_schema;
+            for( auto old_s : table_it->second->getSchema()){
+                for ( auto new_s : selected_columns){
+                    if(old_s.name == new_s){
+                        new_schema.push_back(old_s);
+                    }
+                }
+            }
+            if(new_schema.size() != selected_columns.size()){
+                response->setStatus(false);
+                response->setMessage("selected_columns not found for select");
+                break;
+            }
+            Table new_Table(new_schema);
+
+            auto condition = parser.getCondition();
+
+            std::vector<std::string> column_name;
+            auto Expression = parse_where(condition, column_name);
+
+            std::vector<config::ColumnValue> statement(column_name.size());
+            for( auto row : table_it->second->getData()){
+                for(int i = 0; i < column_name.size(); ++i) {
+                    statement[i] = row.second[column_name[i]];
+                }
+                auto ans = Expression ->apply(statement);
+                if(std::holds_alternative<std::monostate>(ans[column_name.size()])){
+                    config::RowType new_row;
+                    for(auto name: new_schema){
+                        new_row[name.name] = row.second[name.name];
+                    }
+                    new_Table.insertRowType(new_row);
+                }else if(std::get<bool>(ans[column_name.size()])){
+                    config::RowType new_row;
+                    for(auto name: new_schema){
+                        new_row[name.name] = row.second[name.name];
+                    }
+                    new_Table.insertRowType(new_row);
+                }
+            }
+            response->setStatus(true);
+            response->setData(new_Table.getData());
+            break;
+        }
+
         // Handle other command types if needed
         default: {
             response->setStatus(false);
