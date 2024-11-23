@@ -3,6 +3,7 @@
 #include "Config.h"
 
 #include <unordered_map>
+#include <map>
 #include <string>
 #include <vector>
 #include <tuple>
@@ -34,13 +35,14 @@ public:
     // Метод для вставки без указания названий колонок
     bool insertRecord(const std::vector<std::string>& insert_values);
     bool deleteRow(const int& row_id);
-    void removeFromUnorderedIndices(const int& row_id, const config::RowType& row);
-    void updateUnorderedIndices(const int& row_id, const config::RowType& new_row);
+    void updateIndices(const int& row_id, const config::RowType& new_row);
+
+    bool updateRowType(int record_id, const config::RowType& new_row);
+    void removeFromIndices(const int& row_id);
 
     bool insertRowType(const config::RowType& insert_values);
-    bool updateRowType(int record_id, const config::RowType& new_row);
-    bool createUnorderedIndex(const std::vector<std::string>& columns_name);
-    bool fillUnordered(const int& id, const config::RowType rows);
+    bool createIndex(const std::vector<std::string>& columns_name, config::IndexType index_type);
+    void insertIndices(const int& id, const config::RowType& row);
 
     inline const std::unordered_map<int, config::RowType>& getData() const { return data_; }
     inline const std::vector<config::ColumnSchema>& getSchema() const { return schema_; }
@@ -61,6 +63,7 @@ private:
     std::unordered_map<int, config::RowType> data_;
     std::unordered_map<std::string,
         std::unordered_multimap<std::size_t, int>> indices_;
+    std::unordered_map<std::string, std::multimap<config::ColumnValue, int>> ordered_indices_;
 
     std::unordered_map<std::string, int> autoincrement_counters_;
     std::unordered_map<std::string, bool> unique_null_value_;

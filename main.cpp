@@ -20,7 +20,10 @@ int main() {
     //std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where id % 2 = 1 && ( | login | < 7 || | mom | < 0 ) && ( is_admin = true )";
 
     std::cout << "Содержимое таблицы до удаления:" << std::endl;
-
+    auto indexes = db.execute("create unordered index on users by is_admin, login");
+    if (!indexes) {
+        std::cout << "dfugjdfsngjfdsg" << std::endl;
+    }
     auto select_response_before = db.execute("select id, login, mom, is_parent, is_admin from users where true");
     if (!select_response_before->getStatus()) {
         std::cout << "sdgdsg" << std::endl;
