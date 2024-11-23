@@ -138,7 +138,6 @@ bool QueryParser::createIndexParse() {
     table_name_ = match[2];                 // Имя таблицы
 
     // Определяем тип индекса
-    IndexType index_type;
     std::transform(index_type_str.begin(), index_type_str.end(), index_type_str.begin(), [](unsigned char c) { return std::tolower(c); });
     config::IndexType index_type;
     if (index_type_str == "ordered") {
@@ -165,10 +164,10 @@ bool QueryParser::createIndexParse() {
     for (auto [key, value] : column_index_type_) {
         std::cout << "Col name: " << key << " ";
         switch (value) {
-        case IndexType::ORDERED:
+        case config::IndexType::ORDERED:
             std::cout << "ordered" << std::endl;
             break;
-        case IndexType::UNORDERED:
+        case config::IndexType::UNORDERED:
             std::cout << "unordered" << std::endl;
             break;
         default:
@@ -220,8 +219,6 @@ bool QueryParser::createTableParse() {
                     } else if (attribute == "unique") {
                         params.attributes[0] = 1;
                     } else {
-                        return false;
-                    } else{
                         return false;
                     }
                 }

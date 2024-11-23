@@ -232,10 +232,10 @@ TEST(QueryParserTest, CreateIndexTestSimple) {
 
     std::cout << std::endl;
     std::cout << "Expected values:" << std::endl;
-    std::unordered_map<std::string, IndexType> column_index_type_ = {
-        {"login", {IndexType::UNORDERED}},
+    std::unordered_map<std::string, config::IndexType> column_index_type_ = {
+        {"login", {config::IndexType::UNORDERED}},
 
-        {"id", {IndexType::UNORDERED}},
+        {"id", {config::IndexType::UNORDERED}},
 
     };
     
@@ -260,10 +260,10 @@ TEST(QueryParserTest, CreateIndexTestSimple) {
     for (const auto& [key, value] : reate_values){
         std::cout << "Column: " << key << " Type: ";
         switch (value) {
-        case IndexType::ORDERED:
+        case config::IndexType::ORDERED:
             std::cout << "ordered" << std::endl;
             break;
-        case IndexType::UNORDERED:
+        case config::IndexType::UNORDERED:
             std::cout << "unordered" << std::endl;
             break;
         default:
