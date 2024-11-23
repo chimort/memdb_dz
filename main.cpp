@@ -7,6 +7,8 @@ int main() {
     memdb::Database &db = memdb::Database::getInstance();
     std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
     db.execute(create_table_query);
+    db.execute("create ordered index on users by age");
+    db.execute("create unordered index on users by login");
     db.execute(R"(insert (login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)");
     db.execute(R"(insert (login = "Bob", age = 30, mom = "Martha", is_parent = true) to users)");
     db.execute(R"(insert (login = "Carol", password_hash = 0x3333333333333333, is_admin = false, age = 22, is_parent = false) to users)");
@@ -20,7 +22,10 @@ int main() {
     //std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where id % 2 = 1 && ( | login | < 7 || | mom | < 0 ) && ( is_admin = true )";
 
     std::cout << "Содержимое таблицы до удаления:" << std::endl;
-
+    auto indexes = db.execute("create unordered index on users by is_admin, login");
+    if (!indexes) {
+        std::cout << "dfugjdfsngjfdsg" << std::endl;
+    }
     auto select_response_before = db.execute("select id, login, mom, is_parent, is_admin from users where true");
     if (!select_response_before->getStatus()) {
         std::cout << "sdgdsg" << std::endl;
