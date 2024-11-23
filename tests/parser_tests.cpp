@@ -7,50 +7,8 @@
 using namespace memdb;
 using namespace parser; 
 
-TEST(QueryParserTest, InsertParseTest) {
-    std::string insert_query = "inSert (id = 1, name = 'Alice', age = 30) To users";
-    QueryParser parser(insert_query);
-    
-    std::cout << "Testing query: " << insert_query << std::endl;
-
-    bool parse_result = parser.parse();
-    
-    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
-    std::cout << "Parsed command: " << (parse_result ? "INSERT" : "Invalid") << std::endl;
-    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
-
-    EXPECT_TRUE(parse_result);
-    EXPECT_EQ(parser.getCommandName(), CommandType::INSERT);    
-    EXPECT_EQ(parser.getTableName(), "users");
-    
-    std::unordered_map<std::string, std::string> expected_values = {
-        {"id", "1"},
-        {"name", "'Alice'"},
-        {"age", "30"}
-    };
-    
-    auto insert_values = parser.getInsertValues();
-    EXPECT_EQ(insert_values.size(), expected_values.size());
-
-    std::cout << "Expected values: " << std::endl;
-    for (const auto& [key, value] : expected_values) {
-        std::cout << "  " << key << " = " << value << std::endl;
-    }
-
-    std::cout << "Parsed insert values: " << std::endl;
-    for (const auto& [key, value] : insert_values) {
-        std::cout << "  " << key << " = " << value << std::endl;
-    }
-
-    for (const auto& [key, value] : expected_values) {
-        auto it = insert_values.find(key);
-        ASSERT_TRUE(it != insert_values.end()) << "Column " << key << " not found in insert values.";
-        EXPECT_EQ(it->second, value) << "Value for column " << key << " does not match.";
-    }
-}
-
-TEST(QueryParserTest, CreateParseTest) {
-    std::string create_query = R"(CREATE taBle users ({key, autoincrement} id : int32,\n login: string[32] = "Привет, БД.", password_hash: bytes[9], is_admin : bool = false))";
+TEST(QueryParserTest, CreateTableTestSimple) {
+    std::string create_query = R"(CREATE\n\nTABLE users ({key, unique}   id: int32, \n login: string[32] = "Привет, БД.", password_hash: bytes[9] = 0x1341, is_admin : bool   = false))";
     QueryParser parser(create_query);
     
     std::cout << "Testing query: " << create_query << std::endl;
@@ -67,9 +25,9 @@ TEST(QueryParserTest, CreateParseTest) {
     
 
     std::vector<config::ColumnSchema> columns_parametrs_ = {
-        {"id", config::ColumnType::INT, 0, {0, 1, 1}},
-        {"login", config::ColumnType::STRING, 12, {0, 0, 0}, "Привет, БД."}, 
-        {"password_hash", config::ColumnType::BITSTRING, 9, {0, 0, 0}, ""},
+        {"id", config::ColumnType::INT, 0, {1, 0, 1}},
+        {"login", config::ColumnType::STRING, 32, {0, 0, 0}, "Привет, БД."}, 
+        {"password_hash", config::ColumnType::BITSTRING, 9, {0, 0, 0}, "0x1341"},
         {"is_admin", config::ColumnType::BOOL, 0, {0, 0, 0}, "false"}
     };
 
@@ -150,31 +108,135 @@ TEST(QueryParserTest, CreateParseTest) {
         std::cout << std::endl;
     }
     std::cout << std::endl;
+    
+}
 
-
-
-
-    create_query = "crEatE orDered index\n ON users BY login, id, admin";
+TEST(QueryParserTest, CreateTableTestRegisters) {
+    std::string create_query = R"(CReATE TaBle family (  {UNiquE} name: string[12], \n age: bytes[50] = 0x0, {UNIQUE,\n\n    \n KEY} passport_data : bytes[100], job : string[30] = "Безработный(ая).", {unIque, auToincRemenT, KeY} family_status : string[30]))";
+    QueryParser parser(create_query); 
+    
     std::cout << "Testing query: " << create_query << std::endl;
-    QueryParser parser2(create_query);
-    bool parse2_result = parser2.parse();
+
+    bool parse_result = parser.parse();
+    
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "CREATE_TABLE" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::CREATE_TABLE);    
+    EXPECT_EQ(parser.getTableName(), "family");
+    
+
+    std::vector<config::ColumnSchema> columns_parametrs_ = {
+        {"name", config::ColumnType::STRING, 12, {1, 0, 0}},
+        {"age", config::ColumnType::BITSTRING, 50, {0, 0, 0}, "0x0"}, 
+        {"passport_data", config::ColumnType::BITSTRING, 100, {1, 0, 1}},
+        {"job", config::ColumnType::BOOL, 30, {0, 0, 0}, "Безработный(ая)."},
+        {"family_status", config::ColumnType::BOOL, 30, {1, 1, 1}}
+    };
+
+    std::cout << std::endl;
+    std::cout << "Expected values: " << std::endl;
+    for (const auto& it : columns_parametrs_) {
+        std::cout << "Key: " << it.name << " Type: ";
+        switch (it.type) {
+            case config::ColumnType::INT:
+                std::cout << "int";
+                break;
+            case config::ColumnType::STRING:
+                std::cout << "string";
+                break;
+            case config::ColumnType::BOOL:
+                std::cout << "bool";
+                break;
+            case config::ColumnType::BITSTRING:
+                std::cout << "bitstring";
+                break;
+            default:
+                std::cout << "Unknown";
+        }
+
+        std::cout << " Default: " << it.default_value << " Attributes: ";
+
+        if (it.attributes[0] == 1){
+            std::cout << "unique ";
+        }
+        if (it.attributes[1] == 1){
+            std::cout << "autoincrement ";
+        }
+        if (it.attributes[2] == 1){
+            std::cout << "key ";
+        }
+
+        std::cout << "Max Size:" << it.max_size;
+        std::cout << std::endl;       
+    }
+    std::cout << std::endl;
+
+    auto create_values = parser.getCreateTableParametrs();
+
+    std::cout << std::endl;
+    std::cout << "Parsed values: " << std::endl;
+    for (const auto& it : create_values) {
+        std::cout << "Key: " << it.name << " Type: ";
+        switch (it.type) {
+            case config::ColumnType::INT:
+                std::cout << "int";
+                break;
+            case config::ColumnType::STRING:
+                std::cout << "string";
+                break;
+            case config::ColumnType::BOOL:
+                std::cout << "bool";
+                break;
+            case config::ColumnType::BITSTRING:
+                std::cout << "bitstring";
+                break;
+            default:
+                std::cout << "Unknown";
+        }
+        
+        std::cout << " Default: " << it.default_value << " Attributes: ";
+
+        if (it.attributes[0] == 1){
+            std::cout << "unique ";
+        }
+        if (it.attributes[1] == 1){
+            std::cout << "autoincrement ";
+        }
+        if (it.attributes[2] == 1){
+            std::cout << "key ";
+        }
+
+        std::cout << "Max Size:" << it.max_size;
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+    
+}
+
+TEST(QueryParserTest, CreateIndexTestSimple) {
+    std::string create_query = "crEatE uNordErED  \n  INdEX ON\n\n\nusers BY id, login";
+    std::cout << "Testing query: " << create_query << std::endl;
+    QueryParser parser(create_query);
+    bool parse_result = parser.parse();
 
     std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
     std::cout << "Parsed command: " << (parse_result ? "CREATE_INDEX" : "Invalid") << std::endl;
     std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
 
-    EXPECT_TRUE(parse2_result);
-    EXPECT_EQ(parser2.getCommandName(), CommandType::CREATE_INDEX);    
-    EXPECT_EQ(parser2.getTableName(), "users");
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::CREATE_INDEX);    
+    EXPECT_EQ(parser.getTableName(), "users");
 
     std::cout << std::endl;
     std::cout << "Expected values:" << std::endl;
     std::unordered_map<std::string, IndexType> column_index_type_ = {
-        {"login", {IndexType::ORDERED}},
+        {"login", {IndexType::UNORDERED}},
 
-        {"id", {IndexType::ORDERED}},
+        {"id", {IndexType::UNORDERED}},
 
-        {"admin", {IndexType::ORDERED}}
     };
     
     for (const auto& [key, value] : column_index_type_){
@@ -192,10 +254,10 @@ TEST(QueryParserTest, CreateParseTest) {
         }
     }    
 
-    auto reate_values = parser2.getCreateIndexType();
+    auto reate_values = parser.getCreateIndexType();
     std::cout << std::endl;
     std::cout << "Parsed Values" << std::endl;
-    for (const auto& [key, value] : column_index_type_){
+    for (const auto& [key, value] : reate_values){
         std::cout << "Column: " << key << " Type: ";
         switch (value) {
         case IndexType::ORDERED:
@@ -209,7 +271,48 @@ TEST(QueryParserTest, CreateParseTest) {
             break;
         }
     }  
+}
+
+TEST(QueryParserTest, InsertParseTestSimple) {
+    std::string insert_query = R"(insert (id = 1, age = 30, name = "Alice") To users)";
+    QueryParser parser(insert_query);
     
+    std::cout << "Testing query: " << insert_query << std::endl;
+
+    bool parse_result = parser.parse();
+    
+    std::cout << "Parse result: " << (parse_result ? "Success" : "Failure") << std::endl;
+    std::cout << "Parsed command: " << (parse_result ? "INSERT" : "Invalid") << std::endl;
+    std::cout << "Parsed table name: " << parser.getTableName() << std::endl;
+
+    EXPECT_TRUE(parse_result);
+    EXPECT_EQ(parser.getCommandName(), CommandType::INSERT);    
+    EXPECT_EQ(parser.getTableName(), "users");
+    
+    std::unordered_map<std::string, std::string> expected_values = {
+        {"id", "1"},
+        {"name", "'Alice'"},
+        {"age", "30"}
+    };
+    
+    auto insert_values = parser.getInsertValues();
+    EXPECT_EQ(insert_values.size(), expected_values.size());
+
+    std::cout << "Expected values: " << std::endl;
+    for (const auto& [key, value] : expected_values) {
+        std::cout << "  " << key << " = " << value << std::endl;
+    }
+
+    std::cout << "Parsed insert values: " << std::endl;
+    for (const auto& [key, value] : insert_values) {
+        std::cout << "  " << key << " = " << value << std::endl;
+    }
+
+    for (const auto& [key, value] : expected_values) {
+        auto it = insert_values.find(key);
+        ASSERT_TRUE(it != insert_values.end()) << "Column " << key << " not found in insert values.";
+        EXPECT_EQ(it->second, value) << "Value for column " << key << " does not match.";
+    }
 }
 
 TEST(QueryParserTest, SelectParseTest) {

@@ -15,6 +15,12 @@ namespace parser
 
 bool QueryParser::parse()
 {   
+   // Заменяем все символы перевода строки на пробелы с помощью регулярных выражений
+    size_t pos = 0;
+    while ((pos = str_.find("\\n", pos)) != std::string::npos) {
+        str_.replace(pos, 2, " "); // Заменяем "\n" (2 символа) на пробел
+        pos += 1; // Сдвигаем позицию для поиска дальше
+    }
 
     size_t start_pos = str_.find_first_not_of(' ');
     if (start_pos == std::string::npos) {
@@ -44,17 +50,21 @@ bool QueryParser::parse()
         str_ = str_.substr(7); 
         return updateParse();
     } else if (str_.compare(0, 6, "create") == 0) {
-        if (str_.length() < 12) {
-            return false;
+        std::string str_2 = str_.substr(6);
+        size_t create_type_pos = str_2.find_first_not_of(' ');
+        if (create_type_pos == std::string::npos) {
+            create_type_pos = 0;
         }
-        std::transform(str_.begin() + 6, str_.begin() + 12, str_.begin() + 6, [](unsigned char c) { return std::tolower(c); });
-        if (str_.compare(0, 12, "create table") == 0){
+        str_2 = str_2.substr(create_type_pos);
+
+        std::transform(str_2.begin(), str_2.begin() + 9, str_2.begin(), [](unsigned char c) { return std::tolower(c); });
+        if (str_2.compare(0, 5, "table") == 0){
             command_type_ = CommandType::CREATE_TABLE;
             return createTableParse();
-        } else {
+        } else if (str_2.compare(0, 7, "ordered") || str_2.compare(0, 9, "unordered")){
             command_type_ = CommandType::CREATE_INDEX;
             return createIndexParse();
-        }
+        } 
     } else {
         command_type_ = CommandType::UNKNOWN;
         return false;
@@ -129,6 +139,7 @@ bool QueryParser::createIndexParse() {
 
     // Определяем тип индекса
     IndexType index_type;
+    std::transform(index_type_str.begin(), index_type_str.end(), index_type_str.begin(), [](unsigned char c) { return std::tolower(c); });
     if (index_type_str == "ordered") {
         index_type = IndexType::ORDERED;
     } else if (index_type_str == "unordered") {
@@ -147,6 +158,21 @@ bool QueryParser::createIndexParse() {
         std::string column = *it++;
         if (!column.empty()) {
             column_index_type_[column] = index_type;
+        }
+    }
+
+    for (auto [key, value] : column_index_type_) {
+        std::cout << "Col name: " << key << " ";
+        switch (value) {
+        case IndexType::ORDERED:
+            std::cout << "ordered" << std::endl;
+            break;
+        case IndexType::UNORDERED:
+            std::cout << "unordered" << std::endl;
+            break;
+        default:
+            std::cout << "unknown" << std::endl;
+            break;
         }
     }
 
@@ -184,6 +210,7 @@ bool QueryParser::createTableParse() {
             std::sregex_token_iterator attr_end;
             while (attr_it != attr_end) {
                 std::string attribute = *attr_it++;
+                std::transform(attribute.begin(), attribute.end(), attribute.begin(), ::tolower);
                 if (!attribute.empty()) {
                     if (attribute == "key") {
                         params.attributes[2] = 1;
@@ -191,6 +218,8 @@ bool QueryParser::createTableParse() {
                         params.attributes[1] = 1;
                     } else if (attribute == "unique") {
                         params.attributes[0] = 1;
+                    } else {
+                        return false;
                     }
                 }
             }
