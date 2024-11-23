@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <variant>
+#include <set>
 
 namespace memdb
 {
@@ -146,6 +147,8 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             std::vector<std::string> column_name;
             auto expression = parse_where(condition, column_name);
 
+            std::set<int> ids; // id для удаления
+
             std::vector<config::ColumnValue> statement(column_name.size());
             for (auto row : table_it->second->getData()) {
                 for (int i = 0; i < column_name.size(); ++i) {
@@ -153,19 +156,19 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                 }
                 auto ans = expression->apply(statement);
                 if (std::holds_alternative<std::monostate>(ans[column_name.size()])) {
-                    const int row_id = row.first;
-                    if (!table_it->second->deleteRow(row_id)) {
-                        response->setStatus(false);
-                        response->setMessage("Error in delete query");
-                    }
+                    ids.insert(row.first);
                 } else if (std::get<bool>(ans[column_name.size()])) {
-                    const int row_id = row.first;
-                    if (table_it->second->deleteRow(row_id)) {
-                        response->setStatus(false);
-                        response->setMessage("Error in delete query");
-                    }
+                    ids.insert(row.first);
                 }
             }
+            for (const int id : ids) {
+                if (!table_it->second->deleteRow(id)) {
+                    response->setStatus(false);
+                    response->setMessage("Error on delete method");
+                    return response;
+                }
+            }
+
             response->setStatus(true);
             break;
         } case parser::CommandType::CREATE_INDEX: {
