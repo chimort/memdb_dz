@@ -180,6 +180,15 @@ bool Table::insertRowType(const config::RowType& row) {
     return true;
 }
 
+bool Table::updateRowType(int record_id, const config::RowType& new_row) {
+    auto old_row = data_[record_id];
+    for(auto temp: new_row){
+        old_row[temp.first] = temp.second;
+    }
+    return true;
+}
+
+
 bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, 
     config::ColumnValue& out_value) 
 {

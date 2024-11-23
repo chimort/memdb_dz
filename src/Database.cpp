@@ -251,27 +251,37 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             //надо будет написать проверку на выражение
 
             std::vector<config::ColumnValue> statement(column_name.size());
+            //надо будет проверить налиие колонки;
             for( auto row : table_it->second->getData()){
+
                 for(int i = 0; i < column_name.size(); ++i) {
                     statement[i] = row.second[column_name[i]];
                 }
                 auto ans = Expression ->apply(statement);
+                bool isWhere = false ;
                 if(std::holds_alternative<std::monostate>(ans[column_name.size()])){
-                    config::RowType new_row;
-                    for(auto name: new_schema){
-                        new_row[name.name] = row.second[name.name];
-                    }
-                    new_Table.insertRowType(new_row);
+                    isWhere = true;
                 }else if(std::get<bool>(ans[column_name.size()])){
+                    isWhere = true;
+                }
+                if(isWhere){
                     config::RowType new_row;
-                    for(auto name: new_schema){
-                        new_row[name.name] = row.second[name.name];
+                    for( auto val_col : assignment){
+                        std::vector<std::string> assignment_column_name;
+                        auto assignment_Expression = parse_where(val_col.second, assignment_column_name);
+                        std::vector<config::ColumnValue> assignment_statement(column_name.size());
+                        for(int i = 0; i < assignment_column_name.size(); ++i) {
+                            assignment_statement[i] = row.second[assignment_column_name[i]];
+                        }
+                        auto assignment_ans = assignment_Expression ->apply(assignment_statement);
+                        new_row[val_col.first] = assignment_ans[assignment_column_name.size()];
                     }
-                    new_Table.insertRowType(new_row);
+                    tables_[table_name]->updateRowType(row.first, new_row);
+
+                    auto t =
                 }
             }
             response->setStatus(true);
-            response->setData(new_Table.getData());
             break;
         }
 

@@ -35,6 +35,7 @@ public:
     bool insertRecord(const std::vector<std::string>& insert_values);
 
     bool insertRowType(const config::RowType& insert_values);
+    bool updateRowType(int record_id, const config::RowType& new_row);
     bool createUnorderedIndex(const std::vector<std::string>& columns_name);
     bool fillUnordered(const int& id, const config::RowType rows);
 
