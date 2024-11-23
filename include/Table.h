@@ -33,6 +33,8 @@ public:
     bool insertRecord(const std::unordered_map<std::string, std::string>& insert_values);
     // Метод для вставки без указания названий колонок
     bool insertRecord(const std::vector<std::string>& insert_values);
+    bool deleteRow(const int& row_id);
+    void removeFromUnorderedIndices(const int& row_id, const config::RowType& row);
 
     bool insertRowType(const config::RowType& insert_values);
     bool createUnorderedIndex(const std::vector<std::string>& columns_name);
