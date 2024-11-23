@@ -203,21 +203,22 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
         case config::ColumnType::BITSTRING: {
             if (value_str.size() > 2 && value_str[0] == '0' && (value_str[1] == 'x' || value_str[1] == 'X')) {
                 std::string hex_str = value_str.substr(2);
-                if (hex_str.empty() || hex_str.size() % 2 != 0 || (hex_str.size() > column_schema.max_size * 2)) {
+                if (hex_str.size() > column_schema.max_size * 2) {
                     return false;
                 }
                 config::BitString bit_string;
-                for (size_t i = 0; i < hex_str.length(); i += 2) {
-                    std::string byte_str = hex_str.substr(i, 2);
-                    uint8_t byte_value;
-                    auto [ptr_byte, ec_byte] = std::from_chars(byte_str.data(), byte_str.data() + byte_str.size(), byte_value, 16);
-                    if (ec_byte != std::errc()) {
+                auto te = column_schema.max_size * 2 - hex_str.length();
+                for(int i = 0; i < te; ++i){
+                    bit_string.push_back('0');
+                }
+                for (size_t i = 0; i < hex_str.length(); ++i) {
+                    uint8_t symb = hex_str[i];
+                    if((symb - '0' >= 0 && symb - '9' <= 0) || (std::tolower(symb) - 'a' >= 0 && std::tolower(symb) - 'f' <= 0)){
+                        bit_string.push_back(std::tolower(hex_str[i]));
+                    }
+                    else{
                         return false;
                     }
-                    bit_string.push_back(byte_value);
-                }
-                if (bit_string.size() > column_schema.max_size) {
-                    return false; // Превышен максимальный размер битовой строки
                 }
                 out_value = bit_string;
                 return true;

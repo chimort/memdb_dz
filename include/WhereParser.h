@@ -864,11 +864,11 @@ bool isStr(const std::string& str){
     return false;
 }
 
-bool isBitString(const std::string& str){
+bool isBitString(std::string str){
     if(str.size() > 1){
-        if(str.front() == '0' && str[1] == 'x'){
+        if(str.front() == '0' && std::tolower(str[1]) == 'x'){
             for(int i = 2 ; i < str.size(); ++i){
-                if((str[i] - '0' < 0 || str[i] - '9' > 0) && (str[i] - 'A' < 0 || str[i] - 'F' > 0)){
+                if(!((str[i] - '0' >= 0 || str[i] - '9' <= 0) || (std::tolower(str[i]) - 'a' < 0 || std::tolower(str[i]) - 'f' > 0))){
                     return false;
                 }
             }
@@ -1047,12 +1047,16 @@ std::vector<std::string> infixToPostfix(std::vector<std::string> infix)
 }
 
 std::shared_ptr<Statement> parse_where(const std::string& str, std::vector<std::string>& column_name){
-    std::string s;
-    std::stringstream ss(str);
+    std::string piece_str;
+    std::stringstream all_str(str);
     std::vector<std::string> v;
 
-    while (getline(ss, s, ' ')) {
-        v.push_back(s);
+    while (getline(all_str, piece_str, ' ')) {
+        std::string statement;
+        std::stringstream all_piece_str(piece_str);
+        while (getline(all_piece_str, statement, '\n')){
+            v.push_back(statement);
+        }
     }
 
     auto temp = infixToPostfix(v);

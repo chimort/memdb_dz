@@ -369,7 +369,7 @@ TEST_F(TableTest, InsertWithBitStringValues) {
         // Проверяем значение "data1"
         const auto& data1_value = found_row->at("data1");
         EXPECT_TRUE(std::holds_alternative<config::BitString>(data1_value));
-        config::BitString expected_data1 = {0xDE, 0xAD, 0xBE, 0xEF};
+        config::BitString expected_data1 = {'0','0','0','0','0','0','0','0', 'd', 'e', 'a', 'd', 'b', 'e', 'e', 'f'};
         EXPECT_EQ(std::get<config::BitString>(data1_value), expected_data1);
 
         // Выводим значение "data1"
