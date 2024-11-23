@@ -172,6 +172,15 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     return true;
 }
 
+bool Table::deleteRow(const int row_id)
+{
+    auto erased_count = data_.erase(row_id);
+    if (erased_count == 0) {
+        return false;
+    }
+    return true;
+}
+
 bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, 
     config::ColumnValue& out_value) 
 {
