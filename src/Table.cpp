@@ -181,13 +181,64 @@ bool Table::insertRowType(const config::RowType& row) {
 }
 
 bool Table::updateRowType(int record_id, const config::RowType& new_row) {
-    auto old_row = data_[record_id];
     for(auto temp: new_row){
-        old_row[temp.first] = temp.second;
+        data_[record_id][temp.first] = temp.second;
     }
     return true;
 }
 
+bool Table::deleteRow(const int& row_id)
+{
+    auto it = data_.find(row_id);
+    if (it != data_.end()) {
+        removeFromUnorderedIndices(row_id, it->second);
+        data_.erase(it);
+        return true;
+    }
+    return false;
+}
+
+void Table::removeFromUnorderedIndices(const int& row_id, const config::RowType& row) 
+{
+    for (auto& [column_name, index_map] : indices_) {
+        auto it = row.find(column_name);
+        if (it != row.end()) {
+            const auto& value = it->second;
+            size_t hash_value = makeHashKey(value);
+            auto& index = index_map;
+
+            auto range = index.equal_range(hash_value);
+            for (auto iter = range.first; iter != range.second; ) {
+                if (iter->second == row_id) {
+                    iter = index.erase(iter);
+                } else {
+                    ++iter;
+                }
+            }
+        }
+    }
+}
+
+void Table::updateUnorderedIndices(const int& row_id, const config::RowType& new_row) {
+    for (auto &[column_name, index_map]: indices_) {
+        auto it = new_row.find(column_name);
+        if (it != new_row.end()) {
+            const auto &value = data_[row_id][column_name];
+            size_t hash_value = makeHashKey(value);
+            auto &index = index_map;
+
+            auto range = index.equal_range(hash_value);
+            for (auto iter = range.first; iter != range.second;) {
+                if (iter->second == row_id) {
+                    iter = index.erase(iter);
+                    iter = index.insert({makeHashKey(new_row.at(column_name)), row_id});
+                } else {
+                    ++iter;
+                }
+            }
+        }
+    }
+}
 
 bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, 
     config::ColumnValue& out_value) 

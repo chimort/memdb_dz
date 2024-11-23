@@ -1,4 +1,5 @@
 #include "Database.h"
+#include "utils.h"
 #include <iostream>
 
 int main() {
@@ -7,7 +8,7 @@ int main() {
     std::string create_table_query = "creatE table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
     db.execute(create_table_query);
     db.execute(R"(inseRt (login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)");
-    db.execute(R"(insert (login = "Bob", age = 30, mom = "Martha", is_parent = true) to users)");
+    db.execute(R"(insert (login = "vasya", age = 30, mom = "Martha", is_parent = true) to users)");
     db.execute(R"(insert (login = "Carol", password_hash = 0x3333333333333333, is_admin = false, age = 22, is_parent = false) to users)");
     db.execute(R"(insert (login = "Dave", password_hash = 0x4444444444444444, is_admin = true, age = 35, mom = "Sara", is_parent = true) to users)");
     db.execute(R"(insert (login = "Eve", password_hash = 0x5555555555555555, is_admin = false, mom = "Nancy", is_parent = false) to users)");
@@ -17,45 +18,106 @@ int main() {
     db.execute(R"(insert (login = "Ivy", password_hash = 0x9999999999999999, is_admin = false, age = 23, mom = "Helen", is_parent = true) to users)");
     db.execute(R"(insert (login = "Jack", password_hash = 0xAAAAAAAAAAAAAAAA, is_admin = true, age = 31, mom = "Diane") to users)");
     //std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where id % 2 = 1 && ( | login | < 7 || | mom | < 0 ) && ( is_admin = true )";
-    std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where true = \ntrue";
-    auto select_response_2 = db.execute(select_query_2);
-    const auto &data_2 = select_response_2->getData();
 
-    std::cout << data_2.size();
+    std::cout << "Содержимое таблицы до удаления:" << std::endl;
 
-    for (const auto &[key, row]: data_2) {
-        int id;
-        std::string login;
-        std::string mom;
-        bool is_admin;
-        bool is_parent;
-
-        if (std::holds_alternative<int>(row.at("id"))) {
-            id = std::get<int>(row.at("id"));
-        } else {
-            id = -1000;
-        }
-        if (std::holds_alternative<std::string>(row.at("login"))) {
-            login = std::get<std::string>(row.at("login"));
-        } else {
-            login = "Non";
-        }
-        if (std::holds_alternative<std::string>(row.at("mom"))) {
-            mom = std::get<std::string>(row.at("mom"));
-        } else {
-            mom = "Non";
-        }
-        if (std::holds_alternative<bool>(row.at("is_admin"))) {
-            is_admin = std::get<bool>(row.at("is_admin"));
-        } else {
-            is_admin = false;
-        }
-        if (std::holds_alternative<bool>(row.at("is_parent"))) {
-            is_parent = std::get<bool>(row.at("is_parent"));
-        } else {
-            is_parent = false;
-        }
+    auto select_response_before = db.execute("select id, login, mom, is_parent, is_admin from users where true");
+    if (!select_response_before->getStatus()) {
+        std::cout << "sdgdsg" << std::endl;
     }
+    const auto& data_before = select_response_before->getData();
+
+    for (const auto& [key, row] : data_before) {
+        auto id_opt = utils::get<int>(row, "id");
+        int id = id_opt.has_value() ? id_opt.value() : -1;
+
+        auto login_opt = utils::get<std::string>(row, "login");
+        std::string login = login_opt.has_value() ? login_opt.value() : "N/A";
+
+        auto mom_opt = utils::get<std::string>(row, "mom");
+        std::string mom = mom_opt.has_value() ? mom_opt.value() : "N/A";
+
+        auto is_admin_opt = utils::get<bool>(row, "is_admin");
+        bool is_admin = is_admin_opt.has_value() ? is_admin_opt.value() : false;
+
+        auto is_parent_opt = utils::get<bool>(row, "is_parent");
+        bool is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : false;
+
+        std::cout << "id: " << id
+                  << ", login: " << login
+                  << ", mom: " << mom
+                  << ", is_admin: " << (is_admin ? "true" : "false")
+                  << ", is_parent: " << (is_parent ? "true" : "false")
+                  << std::endl;
+    }
+
+    auto delete_response = db.execute("update users set is_admin = true where login = \"vasya\"");
+    if (!delete_response->getStatus()) {
+        std::cerr << "Ошибка при удалении: " << delete_response->getMessage() << std::endl;
+    }
+
+    std::cout << "\nСодержимое таблицы после обновления:" << std::endl;
+
+    auto select_response_after = db.execute("select id, login, mom, is_parent, is_admin from users where true");
+    const auto& data_after = select_response_after->getData();
+
+    for (const auto& [key, row] : data_after) {
+        auto id_opt = utils::get<int>(row, "id");
+        int id = id_opt.has_value() ? id_opt.value() : -1;
+
+        auto login_opt = utils::get<std::string>(row, "login");
+        std::string login = login_opt.has_value() ? login_opt.value() : "N/A";
+
+        auto mom_opt = utils::get<std::string>(row, "mom");
+        std::string mom = mom_opt.has_value() ? mom_opt.value() : "N/A";
+
+        auto is_admin_opt = utils::get<bool>(row, "is_admin");
+        bool is_admin = is_admin_opt.has_value() ? is_admin_opt.value() : false;
+
+        auto is_parent_opt = utils::get<bool>(row, "is_parent");
+        bool is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : false;
+
+        std::cout << "id: " << id
+                  << ", login: " << login
+                  << ", mom: " << mom
+                  << ", is_admin: " << (is_admin ? "true" : "false")
+                  << ", is_parent: " << (is_parent ? "true" : "false")
+                  << std::endl;
+    }
+
+    auto dr = db.execute("update users set login = login + \"_deleted\", is_admin = false where\n"
+                         "password_hash < 0x7");
+    if (!dr->getStatus()) {
+        std::cerr << "Ошибка при удалении: " << dr->getMessage() << std::endl;
+    }
+
+    auto s1 = db.execute("select id, login, mom, is_parent, is_admin from users where true");
+    const auto& d1 = s1->getData();
+    std::cout << std::endl;
+    for (const auto& [key, row] : d1) {
+        auto id_opt = utils::get<int>(row, "id");
+        int id = id_opt.has_value() ? id_opt.value() : -1;
+
+        auto login_opt = utils::get<std::string>(row, "login");
+        std::string login = login_opt.has_value() ? login_opt.value() : "N/A";
+
+        auto mom_opt = utils::get<std::string>(row, "mom");
+        std::string mom = mom_opt.has_value() ? mom_opt.value() : "N/A";
+
+        auto is_admin_opt = utils::get<bool>(row, "is_admin");
+        bool is_admin = is_admin_opt.has_value() ? is_admin_opt.value() : false;
+
+        auto is_parent_opt = utils::get<bool>(row, "is_parent");
+        bool is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : false;
+
+        std::cout << "id: " << id
+                  << ", login: " << login
+                  << ", mom: " << mom
+                  << ", is_admin: " << (is_admin ? "true" : "false")
+                  << ", is_parent: " << (is_parent ? "true" : "false")
+                  << std::endl;
+    }
+
     return 0;
 }
 /*

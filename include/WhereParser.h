@@ -52,7 +52,7 @@ public:
         else if(std::holds_alternative<std::string>(a) && std::holds_alternative<std::string>(b)){
             in.pop_back();
             in.pop_back();
-            in.emplace_back(std::get<std::string>(a) + std::get<std::string>(b));
+            in.emplace_back(std::get<std::string>(b) + std::get<std::string>(a));
         }
 
         else if(std::holds_alternative<int>(a) && std::holds_alternative<std::monostate>(b)){

@@ -3,6 +3,8 @@
 #include "WhereParser.h"
 
 #include <iostream>
+#include <variant>
+#include <set>
 
 namespace memdb
 {
@@ -129,6 +131,45 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                 response->setMessage("Table created successfully");                 
             }
             
+            break;
+        } case parser::CommandType::DELETE : {
+            auto table_name_opt = parser.getTableName();
+            
+            const std::string table_name = table_name_opt;
+            auto table_it = tables_.find(table_name);
+            if (table_it == tables_.end()) {
+                response->setStatus(false);
+                response->setMessage("Table not found for delete");
+                return response;
+            } 
+
+            auto condition = parser.getCondition();
+            std::vector<std::string> column_name;
+            auto expression = parse_where(condition, column_name);
+
+            std::set<int> ids; // id для удаления
+
+            std::vector<config::ColumnValue> statement(column_name.size());
+            for (auto row : table_it->second->getData()) {
+                for (int i = 0; i < column_name.size(); ++i) {
+                    statement[i] = row.second[column_name[i]];
+                }
+                auto ans = expression->apply(statement);
+                if (std::holds_alternative<std::monostate>(ans[column_name.size()])) {
+                    ids.insert(row.first);
+                } else if (std::get<bool>(ans[column_name.size()])) {
+                    ids.insert(row.first);
+                }
+            }
+            for (const int id : ids) {
+                if (!table_it->second->deleteRow(id)) {
+                    response->setStatus(false);
+                    response->setMessage("Error on delete method");
+                    return response;
+                }
+            }
+
+            response->setStatus(true);
             break;
         } case parser::CommandType::CREATE_INDEX: {
             auto table_name_opt = parser.getTableName();
@@ -269,16 +310,15 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                     for( auto val_col : assignment){
                         std::vector<std::string> assignment_column_name;
                         auto assignment_Expression = parse_where(val_col.second, assignment_column_name);
-                        std::vector<config::ColumnValue> assignment_statement(column_name.size());
+                        std::vector<config::ColumnValue> assignment_statement(assignment_column_name.size());
                         for(int i = 0; i < assignment_column_name.size(); ++i) {
                             assignment_statement[i] = row.second[assignment_column_name[i]];
                         }
                         auto assignment_ans = assignment_Expression ->apply(assignment_statement);
                         new_row[val_col.first] = assignment_ans[assignment_column_name.size()];
                     }
+                    tables_[table_name]->updateUnorderedIndices(row.first, new_row);
                     tables_[table_name]->updateRowType(row.first, new_row);
-
-                    auto t =
                 }
             }
             response->setStatus(true);
