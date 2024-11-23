@@ -286,6 +286,7 @@ bool Table::fillUnordered(const int& id, const config::RowType row) {
             indices_[col_name].emplace(hash_value, id);
         }
     }
+    return true;
 }
 
 
