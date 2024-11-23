@@ -127,9 +127,18 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         if (!convertValue(insert_values[i], column_schema, value)) {
             return false; 
         }
+
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
-            if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
-                return false;
+            if (indices_.find(column_name) != indices_.end()) {
+                if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+                    return false;
+                }
+            } else {
+                for (auto& [key, every_col_value] : data_) {
+                    if (every_col_value[column_name] == value) {
+                        return false;
+                    }
+                }
             }
         }
 
