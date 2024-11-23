@@ -180,16 +180,37 @@ bool Table::insertRowType(const config::RowType& row) {
     return true;
 }
 
-bool Table::deleteRow(const int& row_id)
+bool Table::deleteRow(const int& row_id) 
 {
-    auto erased_count = data_.erase(row_id);
-    if (erased_count == 0) {
-        return false;
+    auto it = data_.find(row_id);
+    if (it != data_.end()) {
+        removeFromUnorderedIndices(row_id, it->second);
+        data_.erase(it);
+        return true;
     }
-    return true;
+    return false;
 }
 
+void Table::removeFromUnorderedIndices(const int& row_id, const config::RowType& row) 
+{
+    for (auto& [column_name, index_map] : indices_) {
+        auto it = row.find(column_name);
+        if (it != row.end()) {
+            const auto& value = it->second;
+            size_t hash_value = makeHashKey(value);
+            auto& index = index_map;
 
+            auto range = index.equal_range(hash_value);
+            for (auto iter = range.first; iter != range.second; ) {
+                if (iter->second == row_id) {
+                    iter = index.erase(iter);
+                } else {
+                    ++iter;
+                }
+            }
+        }
+    }
+}
 
 bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, 
     config::ColumnValue& out_value) 
