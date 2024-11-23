@@ -169,21 +169,21 @@ TEST(QueryParserTest, CreateParseTest) {
 
     std::cout << std::endl;
     std::cout << "Expected values:" << std::endl;
-    std::unordered_map<std::string, IndexType> column_index_type_ = {
-        {"login", {IndexType::ORDERED}},
+    std::unordered_map<std::string, config::IndexType> column_index_type_ = {
+        {"login", {config::IndexType::ORDERED}},
 
-        {"id", {IndexType::ORDERED}},
+        {"id", {config::IndexType::ORDERED}},
 
-        {"admin", {IndexType::ORDERED}}
+        {"admin", {config::IndexType::ORDERED}}
     };
     
     for (const auto& [key, value] : column_index_type_){
         std::cout << "Column: " << key << " Type: ";
         switch (value) {
-        case IndexType::ORDERED:
+        case config::IndexType::ORDERED:
             std::cout << "ordered" << std::endl;
             break;
-        case IndexType::UNORDERED:
+        case config::IndexType::UNORDERED:
             std::cout << "unordered" << std::endl;
             break;
         default:
@@ -192,23 +192,23 @@ TEST(QueryParserTest, CreateParseTest) {
         }
     }    
 
-    auto reate_values = parser2.getCreateIndexType();
-    std::cout << std::endl;
-    std::cout << "Parsed Values" << std::endl;
-    for (const auto& [key, value] : column_index_type_){
-        std::cout << "Column: " << key << " Type: ";
-        switch (value) {
-        case IndexType::ORDERED:
-            std::cout << "ordered" << std::endl;
-            break;
-        case IndexType::UNORDERED:
-            std::cout << "unordered" << std::endl;
-            break;
-        default:
-            std::cout << "unknown" << std::endl;
-            break;
-        }
-    }  
+    // auto reate_values = parser2.getIndexType();
+    // std::cout << std::endl;
+    // std::cout << "Parsed Values" << std::endl;
+    // for (const auto& [key, value] : column_index_type_){
+    //     std::cout << "Column: " << key << " Type: ";
+    //     switch (value) {
+    //     case config::IndexType::ORDERED:
+    //         std::cout << "ordered" << std::endl;
+    //         break;
+    //     case config::IndexType::UNORDERED:
+    //         std::cout << "unordered" << std::endl;
+    //         break;
+    //     default:
+    //         std::cout << "unknown" << std::endl;
+    //         break;
+    //     }
+    // }  
     
 }
 

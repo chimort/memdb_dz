@@ -4,7 +4,7 @@
 int main() {
     memdb::Database& db = memdb::Database::getInstance();
 
-    std::string create_table_query = "create table my_table (id : int32, name : string[32], age : int32)";
+    std::string create_table_query = "create table my_table ({autoincrement} id : int32, name : string[32], age : int32)";
     auto create_response = db.execute(create_table_query);
     if (!create_response->getStatus()) {
         std::cerr << "Ошибка создания таблицы: " << create_response->getMessage() << std::endl;
@@ -25,7 +25,7 @@ int main() {
         return 1;
     }
 
-    std::string insert_query3 = "insert (id = 3, name = 'Charlie', age = 35) to my_table";
+    std::string insert_query3 = "insert (name = 'Charlie', age = 35) to my_table";
     auto insert_response3 = db.execute(insert_query3);
     if (!insert_response3->getStatus()) {
         std::cerr << "Ошибка вставки данных: " << insert_response3->getMessage() << std::endl;

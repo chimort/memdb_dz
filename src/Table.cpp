@@ -36,8 +36,16 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         }
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
-            if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
-                return false;
+            if (indices_.find(column_name) != indices_.end()) {
+                if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+                    return false;
+                }
+            } else {
+                for (auto& [key, every_col_value] : data_) {
+                    if (every_col_value[column_name] == value) {
+                        return false;
+                    }
+                }
             }
         }
 
@@ -89,9 +97,13 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
             next_id_ = id + 1;
         }
     }
-
     data_[id] = row;
-    indexRow(id, row);
+
+
+    if (indices_.size() != 0){
+        fillUnordered(id, row);
+    }
+    
     return true;
 }
 
@@ -169,6 +181,11 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     }
 
     data_[id] = row;
+
+    if (indices_.size() != 0){
+        fillUnordered(id, row);
+    }
+
     return true;
 }
 
@@ -243,6 +260,34 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
             return false;
     }
 }
+
+
+bool Table::createUnorderedIndex(const std::vector<std::string>& columns_name){
+    // Проверить индексы еще не существуют. Закинуть все сущ. значения сразу.
+
+    for (auto& str : columns_name) {
+        auto index = indices_.find(str);
+        if (index == indices_.end()) {
+            for (auto& [id, row] : data_) {
+                size_t hash_value = makeHashKey(row[str]);
+                indices_[str].emplace(hash_value, id);
+            }
+        }
+    }
+    return true;
+}
+
+bool Table::fillUnordered(const int& id, const config::RowType row) {
+    // Пробегаемся по всем колонкам строки, если совпала колонка с нашим индексом, то мы добавляем ее в значение.
+    for (auto& [col_name, col_value] : row) {
+        for (auto& col_schema : schema_)
+        if (col_name == col_schema.name && col_schema.ordering == config::IndexType::UNORDERED) {
+            size_t hash_value = makeHashKey(col_value);
+            indices_[col_name].emplace(hash_value, id);
+        }
+    }
+}
+
 
 void Table::indexRow(const int& id, const config::RowType& row) {
     for (const auto& column_schema : schema_) {
