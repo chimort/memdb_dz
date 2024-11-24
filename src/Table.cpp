@@ -90,27 +90,6 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     if (!indices_.empty() || !ordered_indices_.empty()){
         insertIndices(id, row);
     }
-
-        // Добавляем вывод после обновления индексов
-    std::cout << "После вставки строки с id = " << id << ":\n";
-    std::cout << "Содержимое индексов:\n";
-
-    // Вывод неупорядоченных индексов
-    for (const auto& [column_name, index_map] : indices_) {
-        std::cout << "Неупорядоченный индекс по столбцу '" << column_name << "':\n";
-        for (const auto& [hash_value, row_id] : index_map) {
-            std::cout << "  Хеш: " << hash_value << ", Row ID: " << row_id << "\n";
-        }
-    }
-
-    // Вывод упорядоченных индексов
-    for (const auto& [column_name, index_map] : ordered_indices_) {
-        std::cout << "Упорядоченный индекс по столбцу '" << column_name << "':\n";
-        for (const auto& [column_value, row_id] : index_map) {
-            std::cout << "  Значение: " << convertColumnValueToString(column_value)
-                      << ", Row ID: " << row_id << "\n";
-        }
-    }
     
     return true;
 }
@@ -213,27 +192,6 @@ bool Table::deleteRow(const int& row_id)
     if (it != data_.end()) {
         removeFromIndices(row_id);
         data_.erase(it);
-
-        // Добавляем вывод после удаления строки
-        std::cout << "После удаления строки с id = " << row_id << ":\n";
-        std::cout << "Содержимое индексов:\n";
-
-        // Вывод неупорядоченных индексов
-        for (const auto& [column_name, index_map] : indices_) {
-            std::cout << "Неупорядоченный индекс по столбцу '" << column_name << "':\n";
-            for (const auto& [hash_value, id] : index_map) {
-                std::cout << "  Хеш: " << hash_value << ", Row ID: " << id << "\n";
-            }
-        }
-
-        // Вывод упорядоченных индексов
-        for (const auto& [column_name, index_map] : ordered_indices_) {
-            std::cout << "Упорядоченный индекс по столбцу '" << column_name << "':\n";
-            for (const auto& [column_value, id] : index_map) {
-                std::cout << "  Значение: " << convertColumnValueToString(column_value)
-                          << ", Row ID: " << id << "\n";
-            }
-        }
         
         return true;
     }

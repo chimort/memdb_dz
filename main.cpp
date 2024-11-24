@@ -9,6 +9,7 @@ int main() {
     db.execute(create_table_query);
     db.execute(R"(inseRt (login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)");
     db.execute(R"(insert (login = "vasya", age = 30, mom = "Martha", is_parent = true) to users)");
+
     db.execute(R"(insert (login = "Carol", password_hash = 0x3333333333333333, is_admin = false, age = 22, is_parent = false) to users)");
     db.execute(R"(insert (login = "Dave", password_hash = 0x4444444444444444, is_admin = true, age = 35, mom = "Sara", is_parent = true) to users)");
     db.execute(R"(insert (login = "Eve", password_hash = 0x5555555555555555, is_admin = false, mom = "Nancy", is_parent = false) to users)");
@@ -55,11 +56,13 @@ int main() {
     }
 
     auto delete_response = db.execute("update users set is_admin = true where login = \"vasya\"");
+
     if (!delete_response->getStatus()) {
         std::cerr << "Ошибка при удалении: " << delete_response->getMessage() << std::endl;
     }
 
     std::cout << "\nСодержимое таблицы после обновления:" << std::endl;
+
 
     auto select_response_after = db.execute("select id, login, mom, is_parent, is_admin from users where true");
     const auto& data_after = select_response_after->getData();
@@ -90,6 +93,7 @@ int main() {
 
     auto dr = db.execute("update users set login = login + \"_deleted\", is_admin = false where\n"
                          "password_hash < 0x71");
+
     if (!dr->getStatus()) {
         std::cerr << "Ошибка при удалении: " << dr->getMessage() << std::endl;
     }
