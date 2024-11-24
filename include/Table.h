@@ -35,11 +35,14 @@ public:
     // Метод для вставки без указания названий колонок
     bool insertRecord(const std::vector<std::string>& insert_values);
     bool deleteRow(const int& row_id);
-    void removeFromIndices(const int& row_id, const config::RowType& row);
+    void updateIndices(const int& row_id, const config::RowType& new_row);
+
+    bool updateRowType(int record_id, const config::RowType& new_row);
+    void removeFromIndices(const int& row_id);
 
     bool insertRowType(const config::RowType& insert_values);
     bool createIndex(const std::vector<std::string>& columns_name, config::IndexType index_type);
-    void updateIndices(const int& id, const config::RowType& row);
+    void insertIndices(const int& id, const config::RowType& row);
 
     inline const std::unordered_map<int, config::RowType>& getData() const { return data_; }
     inline const std::vector<config::ColumnSchema>& getSchema() const { return schema_; }
