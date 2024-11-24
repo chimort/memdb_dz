@@ -207,7 +207,9 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                 return response;
             }
 
-            bool createIndex_res = table->createUnorderedIndex(columns_name);
+            if (queryIndexs.begin()->second == config::IndexType::UNORDERED){
+                bool createIndex_res = table->createUnorderedIndex(columns_name);
+            }
             
 
             break;

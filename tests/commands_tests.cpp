@@ -88,3 +88,77 @@ TEST_F(DatabaseTest, SELECT){
     "DELETE table_name "
     "where col = 321 and col2 = 0x0456;"*/
 }
+TEST_F(DatabaseTest, INSERT) {
+    std::string create_table_query = "create table technique ({unique} cars : string[32], {unique, autoincrement} cars_id : int32, {unique, autoincrement} phone_id : int32, {unique, autoincrement} phone : string[32])";
+    auto res = db.execute(create_table_query);
+    EXPECT_TRUE(res);
+
+    std::string insert_query = "insert (cars = \"Lada\", phone = \"vivo\") to technique";
+    auto res1 = db.execute(insert_query);
+    EXPECT_TRUE(res1);
+
+    // auto table = db.getTable("technique");
+    // auto data_after = table->getData();
+    // for (const auto& [key, row] : data_after) { 
+    //     auto id_opt = utils::get<std::string>(row, "cars"); 
+    //     auto id = id_opt.has_value() ? id_opt.value() : "N/A"; 
+ 
+    //     auto login_opt = utils::get<int>(row, "cars_id"); 
+    //     int login = login_opt.has_value() ? login_opt.value() : -1; 
+ 
+    //     auto is_parent_opt = utils::get<int>(row, "phone_id"); 
+    //     int is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : -1;
+
+    //     auto is_code = utils::get<std::string>(row, "phone");
+    //     auto code = is_code.has_value() ? is_code.value() : "N/A";
+ 
+    //     std::cout << "id_cars: " << id 
+    //               << ", cars: " << login 
+    //               << ", phone_id: " << (is_parent ? "true" : "false") 
+    //               << ", phone" << code
+    //               << std::endl;
+    // }
+
+
+}
+
+TEST_F(DatabaseTest, DELETE) {
+    std::string create_table_query = "create tABle family ({unique} id : int32, name : string[32], isParent : bool, code : bytes[3])";
+
+    auto res = db.execute(create_table_query);
+    EXPECT_TRUE(res);
+
+    auto res1 = db.execute(R"(insert (id = 1, name = "Anna", isParent = false, code = 0x0ffee3) to family)");
+    auto res2 = db.execute(R"(insert (id = 2, name = "Ivan", isParent = true, code = 0x0e572f) to family)");
+
+    EXPECT_TRUE(res1);
+    EXPECT_TRUE(res2);
+
+    std::string delete_query = R"(DELETE family where code = 0x0ffee3)";
+    auto res3 = db.execute(delete_query);
+    EXPECT_TRUE(res3);
+
+    auto table = db.getTable("family");
+    auto data_after = table->getData();
+
+    for (const auto& [key, row] : data_after) { 
+        auto id_opt = utils::get<int>(row, "id"); 
+        int id = id_opt.has_value() ? id_opt.value() : -1; 
+ 
+        auto login_opt = utils::get<std::string>(row, "name"); 
+        std::string login = login_opt.has_value() ? login_opt.value() : "N/A"; 
+ 
+        auto is_parent_opt = utils::get<bool>(row, "is_parent"); 
+        bool is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : false;
+        auto is_code = utils::get<std::vector<uint8_t>>(row, "code");
+        std::vector<uint8_t> code = is_code.has_value() ? is_code.value() : std::vector<uint8_t>{0};
+ 
+        std::cout << "id: " << id 
+                  << ", name: " << login 
+                  << ", is_parent: " << (is_parent ? "true" : "false") 
+                  << std::endl;
+        for (auto& element_vector : code) {
+            std::cout << element_vector << " ";
+        }
+    }
+}

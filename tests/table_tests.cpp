@@ -13,7 +13,7 @@ protected:
 };
 
 // Тест вставки с указанием названий колонок
-TEST_F(TableTest, InsertWithColumnNames) {
+TEST_F(TableTest, InsertWithColumnNamesSimple) {
     std::vector<config::ColumnSchema> columns = {
         {"id", config::ColumnType::INT, 0},
         {"name", config::ColumnType::STRING, 255},
@@ -62,6 +62,105 @@ TEST_F(TableTest, InsertWithColumnNames) {
     if (!record_found) {
         std::cout << "[InsertWithColumnNames] Запись с id = 1 не найдена." << std::endl;
     }
+}
+
+TEST_F(TableTest, InsertWithColumnNamesLongTest) {
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0, {1, 1, 0}},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"job", config::ColumnType::STRING, 255},
+        {"isParent", config::ColumnType::BOOL, 25},
+    };
+    memdb::Table table(columns);
+
+    std::unordered_map<std::string, std::string> insert_values = {
+        {"id", "5"},
+        {"name", "\"Alice\""},
+        {"age", "30"},
+        {"job", "\"Policeman\""},
+        {"isParent", "false"}
+    };
+
+    bool result = table.insertRecord(insert_values);
+    EXPECT_TRUE(result);
+
+    std::cout << "[InsertWithColumnNames] Результат вставки записи с id = 5: " << (result ? "успешно" : "неудачно") << std::endl;
+
+    const auto& data = table.getData();
+    bool record_found = false;
+
+    // Ищем запись с id = 5
+    for (const auto& [record_id, row] : data) {
+        auto id_it = row.find("id");
+        if (id_it != row.end()) {
+            const auto& id_value = id_it->second;
+            if (std::holds_alternative<int>(id_value) && std::get<int>(id_value) == 5) {
+                record_found = true;
+                std::cout << "[InsertWithColumnNames] Найдена запись с id = 1:" << std::endl;
+                std::cout << "  name: " << std::get<std::string>(row.at("name")) << std::endl;
+                std::cout << "  age: " << std::get<int>(row.at("age")) << std::endl;
+                std::cout << "  job: " << std::get<std::string>(row.at("job")) << std::endl;
+                std::cout << "  isParent: " << std::get<bool>(row.at("isParent")) << std::endl;
+
+
+                EXPECT_EQ(std::get<std::string>(row.at("name")), "Alice");
+                EXPECT_EQ(std::get<int>(row.at("age")), 30);
+                EXPECT_EQ(std::get<std::string>(row.at("job")), "Policeman");
+                EXPECT_EQ(std::get<bool>(row.at("isParent")), false);
+                break;
+            }
+        }
+    }
+
+    EXPECT_TRUE(record_found);
+    if (!record_found) {
+        std::cout << "[InsertWithColumnNames] Запись с id = 5 не найдена." << std::endl;
+    }
+
+    std::unordered_map<std::string, std::string> insert_values2 = {
+        {"id", "101"},
+        {"name", "\"Bob\""},
+        {"age", "15"},
+        {"job", "\"Student\""},
+        {"isParent", "false"}
+    };
+    bool result2 = table.insertRecord(insert_values2);
+    EXPECT_TRUE(result2);
+
+    std::cout << "[InsertWithColumnNames] Результат вставки записи с id = 101: " << (result ? "успешно" : "неудачно") << std::endl;
+
+    const auto& data2 = table.getData();
+    bool record_found2 = false;
+
+    // Ищем запись с id = 101
+    for (const auto& [record_id, row] : data2) {
+        auto id_it = row.find("id");
+        if (id_it != row.end()) {
+            const auto& id_value = id_it->second;
+            if (std::holds_alternative<int>(id_value) && std::get<int>(id_value) == 101) {
+                record_found2 = true;
+                std::cout << "[InsertWithColumnNames] Найдена запись с id = 101:" << std::endl;
+                std::cout << "  name: " << std::get<std::string>(row.at("name")) << std::endl;
+                std::cout << "  age: " << std::get<int>(row.at("age")) << std::endl;
+                std::cout << "  job: " << std::get<std::string>(row.at("job")) << std::endl;
+                std::cout << "  isParent: " << std::get<bool>(row.at("isParent")) << std::endl;
+
+
+                EXPECT_EQ(std::get<std::string>(row.at("name")), "Bob");
+                EXPECT_EQ(std::get<int>(row.at("age")), 15);
+                EXPECT_EQ(std::get<std::string>(row.at("job")), "Student");
+                EXPECT_EQ(std::get<bool>(row.at("isParent")), false);
+                break;
+            }
+        }
+    }
+
+    EXPECT_TRUE(record_found2);
+    if (!record_found2) {
+        std::cout << "[InsertWithColumnNames] Запись с id = 101 не найдена." << std::endl;
+    }
+
 }
 
 // Тест вставки без указания названий колонок
@@ -795,4 +894,63 @@ TEST_F(TableTest, UniqueConstraintWithNullValuesTest) {
 
     // Проверяем, что в таблице только одна запись
     EXPECT_EQ(table.getData().size(), 1);
+}
+
+TEST_F(TableTest, DeleteSimpleTest) {
+    std::vector<config::ColumnSchema> columns = {
+        {"id", config::ColumnType::INT, 0},
+        {"name", config::ColumnType::STRING, 255},
+        {"age", config::ColumnType::INT, 0},
+        {"active", config::ColumnType::BOOL, 0}
+    };
+    memdb::Table table(columns);
+
+    std::unordered_map<std::string, std::string> insert_values = {
+        {"id", "1"},
+        {"name", "\"Alice\""},
+        {"age", "30"},
+        {"active", "true"}
+    };
+
+    std::unordered_map<std::string, std::string> insert_values2 = {
+        {"id", "2"},
+        {"name", "\"Bob\""},
+        {"age", "30"},
+        {"active", "true"}
+    };
+
+    bool result = table.insertRecord(insert_values);
+    EXPECT_TRUE(result);
+    bool result2 = table.insertRecord(insert_values2);
+    EXPECT_TRUE(result2);
+
+    bool result_delete = table.deleteRow(2);
+
+    const auto& data = table.getData();
+
+    bool record_found = false;
+    for (const auto& [record_id, row] : data) {
+        auto id_it = row.find("id");
+        if (id_it != row.end()) {
+            const auto& id_value = id_it->second;
+            if (std::holds_alternative<int>(id_value) && std::get<int>(id_value) == 2) {
+                record_found = true;
+
+                std::cout << "[InsertWithColumnNames] Найдена запись с id = 1:" << std::endl;
+                std::cout << "  name: " << std::get<std::string>(row.at("name")) << std::endl;
+                std::cout << "  age: " << std::get<int>(row.at("age")) << std::endl;
+                std::cout << "  active: " << (std::get<bool>(row.at("active")) ? "true" : "false") << std::endl;
+
+                EXPECT_EQ(std::get<std::string>(row.at("name")), "Bob");
+                EXPECT_EQ(std::get<int>(row.at("age")), 30);
+                EXPECT_EQ(std::get<bool>(row.at("active")), true);
+                break;
+            }
+        }
+    }
+
+    EXPECT_TRUE(record_found);
+    if (!record_found) {
+        std::cout << "[InsertWithColumnNames] Запись с id = 2 не найдена." << std::endl;
+    }
 }

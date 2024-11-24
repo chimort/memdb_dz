@@ -13,9 +13,9 @@ namespace memdb
 namespace parser
 {
 
-bool QueryParser::parse()
-{   
+bool QueryParser::parse() { 
    // Заменяем все символы перевода строки на пробелы с помощью регулярных выражений
+
     size_t pos = 0;
     while ((pos = str_.find("\\n", pos)) != std::string::npos) {
         str_.replace(pos, 2, " "); // Заменяем "\n" (2 символа) на пробел
@@ -282,27 +282,50 @@ bool QueryParser::insertParse() {
     }
 
     std::string value_str = str_.substr(open_paren_pos + 1, close_paren_pos - open_paren_pos - 1);
-
     std::vector<std::string> tokens = splitByComma(value_str);
     int i = 0;
+
     for (const auto& token : tokens) {
         size_t eq_pos = token.find('=');
         if (eq_pos == std::string::npos) {
             insert_values_[std::to_string(i++)] = token;
         } else {
             int i1 = 0, i2 = 0;
-            while(token[eq_pos - 1 - i1] == ' '){
+            while (eq_pos > 0 && token[eq_pos - 1 - i1] == ' ') {
                 ++i1;
             }
-            while(token[eq_pos + 1 + i2] == ' '){
+            while (eq_pos + 1 + i2 < token.length() && token[eq_pos + 1 + i2] == ' ') {
                 ++i2;
             }
-            insert_values_[token.substr(0, eq_pos - i1)] = token.substr(eq_pos + 1 + i2);
+
+            std::string key = token.substr(0, eq_pos - i1);
+            std::string value = token.substr(eq_pos + 1 + i2);
+
+            // Удаление пробелов с начала и конца ключа
+            key.erase(0, key.find_first_not_of(" \t"));
+            key.erase(key.find_last_not_of(" \t") + 1);
+
+            // Удаление пробелов с начала и конца значения
+            value.erase(0, value.find_first_not_of(" \t"));
+            value.erase(value.find_last_not_of(" \t") + 1);
+
+            // Обработка кавычек и экранированных символов
+            if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
+                value = value.substr(1, value.size() - 2); // Удаляем кавычки
+
+                size_t pos = 0;
+                while ((pos = value.find("\\\"", pos)) != std::string::npos) {
+                    value.replace(pos, 2, "\""); // Заменяем экранированные кавычки
+                    pos += 1;
+                }
+            }
+
+            insert_values_[key] = value;
         }
     }
 
     std::string take_name = str_.substr(close_paren_pos);
-    static const std::regex pattern(R"(\b[tT][oO]\b)"); //Ищет вариации to (\b значит целым словом)
+    static const std::regex pattern(R"(\b[tT][oO]\b)"); // Ищет вариации to
     std::smatch match;
     if (!std::regex_search(take_name, match, pattern)) {
         return false;
