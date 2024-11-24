@@ -86,7 +86,7 @@ int main() {
     }
 
     auto dr = db.execute("update users set login = login + \"_deleted\", is_admin = false where\n"
-                         "password_hash < 0x7");
+                         "password_hash < 0x71");
     if (!dr->getStatus()) {
         std::cerr << "Ошибка при удалении: " << dr->getMessage() << std::endl;
     }

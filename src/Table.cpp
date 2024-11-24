@@ -286,7 +286,7 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
         case config::ColumnType::BITSTRING: {
             if (value_str.size() > 2 && value_str[0] == '0' && (value_str[1] == 'x' || value_str[1] == 'X')) {
                 std::string hex_str = value_str.substr(2);
-                if (hex_str.size() > column_schema.max_size * 2) {
+                if (hex_str.size() > column_schema.max_size * 2 || hex_str.size()%2 == 1) {
                     return false;
                 }
                 config::BitString bit_string;

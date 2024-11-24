@@ -249,7 +249,7 @@ public:
 
         else if(std::holds_alternative<config::BitString>(a)){
             in.pop_back();
-            in.emplace_back(int(std::get<config::BitString>(a).size()));
+            in.emplace_back(int(std::get<config::BitString>(a).size()/2));
         }
 
         else if(std::holds_alternative<std::monostate>(a)){
@@ -867,6 +867,9 @@ bool isStr(const std::string& str){
 bool isBitString(std::string str){
     if(str.size() > 1){
         if(str.front() == '0' && std::tolower(str[1]) == 'x'){
+            if(str.size() % 2 == 1){
+                std::cout << "error of byteString";
+            }
             for(int i = 2 ; i < str.size(); ++i){
                 if(!((str[i] - '0' >= 0 || str[i] - '9' <= 0) || (std::tolower(str[i]) - 'a' < 0 || std::tolower(str[i]) - 'f' > 0))){
                     return false;
@@ -1052,11 +1055,7 @@ std::shared_ptr<Statement> parse_where(const std::string& str, std::vector<std::
     std::vector<std::string> v;
 
     while (getline(all_str, piece_str, ' ')) {
-        std::string statement;
-        std::stringstream all_piece_str(piece_str);
-        while (getline(all_piece_str, statement, '\n')){
-            v.push_back(statement);
-        }
+        v.push_back(piece_str);
     }
 
     auto temp = infixToPostfix(v);
