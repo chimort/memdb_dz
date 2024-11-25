@@ -70,7 +70,12 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
                 if (!convertValue(column_schema.default_value, column_schema, default_value)) {
                     return false;
                 }
-                row[column_name] = default_value;
+                
+                if (column_schema.attributes[0]) {
+                    row[column_name] = std::monostate{};
+                } else {
+                    row[column_name] = default_value;
+                }
             } else {
                 if (column_schema.attributes[0] || column_schema.attributes[2]) {
                     if (unique_null_value_[column_name]) {
@@ -151,7 +156,13 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
             if (!convertValue(column_schema.default_value, column_schema, default_value)) {
                 return false;
             }
-            row[column_name] = default_value;
+
+            if (column_schema.attributes[0]) {
+                row[column_name] = std::monostate{};
+            } else {
+                row[column_name] = default_value;
+            }
+
         } else {
             if (column_schema.attributes[0] || column_schema.attributes[2]) {
                 if (unique_null_value_[column_name]) {

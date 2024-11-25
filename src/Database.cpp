@@ -305,7 +305,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             std::vector<config::ColumnValue> statement(column_name.size());
             //надо будет проверить налиие колонки;
             for( auto row : table_it->second->getData()){
-
+                
                 for(int i = 0; i < column_name.size(); ++i) {
                     statement[i] = row.second[column_name[i]];
                 }
