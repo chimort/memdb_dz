@@ -35,8 +35,8 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         }
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
-            if (indices_[column_name].size() > 1 && indices_.find(column_name) != indices_.end()) {
-                if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+            if (indices_.find(column_name) != indices_.end()) {
+                if (has_index_ && indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
                     return false;
                 }
             } else {
@@ -86,8 +86,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     id = next_id_++;
     data_[id] = row;
 
-
-    if (!indices_.empty() || !ordered_indices_.empty()){
+    if (has_index_) {
         insertIndices(id, row);
     }
     
@@ -115,8 +114,8 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         }
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
-            if (indices_[column_name].size() > 1 && indices_.find(column_name) != indices_.end()) {
-                if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+            if (indices_.find(column_name) != indices_.end()) {
+                if (has_index_ && indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
                     return false;
                 }
             } else {
@@ -163,7 +162,7 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
     int id;
     id = next_id_++;
     
-    if (!indices_.empty() || !ordered_indices_.empty()) {
+    if (has_index_) {
         insertIndices(id, row);
     }
     data_[id] = row;
@@ -384,6 +383,7 @@ bool Table::createIndex(const std::vector<std::string>& columns_name, config::In
             }
         }
     }
+    has_index_ = true;
     return true;
 }
 

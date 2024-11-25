@@ -28,12 +28,10 @@ public:
             if (column.attributes[2]) {
                 indices_[column.name] = {};
                 column.ordering = config::IndexType::UNORDERED;
+                has_index_ = true;
             }
         }
     }
-
-    std::vector<std::string> findByCol(const std::string& column_name,
-                            const config::ColumnValue& value) const;
 
     bool insertRecord(const std::unordered_map<std::string, std::string>& insert_values);
     // Метод для вставки без указания названий колонок
@@ -58,7 +56,6 @@ private:
     std::string convertColumnValueToString(const config::ColumnValue& value) const;
     std::vector<std::string> parseCSVLine(const std::string& line) const;
     
-    void indexRow(const int& id, const config::RowType& row);
     size_t makeHashKey(const config::ColumnValue& value) const;
 
     bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
@@ -72,7 +69,9 @@ private:
     std::unordered_map<std::string, int> autoincrement_counters_;
     std::unordered_map<std::string, bool> unique_null_value_;
     
+    
     int next_id_ = 0;
+    bool has_index_ = false;
 };
     
 } // namespace memdb
