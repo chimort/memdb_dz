@@ -1,3 +1,4 @@
+#pragma once
 #include <map>
 #include <vector>
 #include <cstdint>
@@ -963,7 +964,7 @@ std::shared_ptr<Statement> compile(const std::vector<std::string>& query, std::v
     return result;
 }
 
-int precedence(std::string op)
+int precedence(const std::string& op)
 {
     if (op == "!"){
         return 11;
@@ -1049,7 +1050,39 @@ std::vector<std::string> infixToPostfix(std::vector<std::string> infix)
     return postfix;
 }
 
-std::shared_ptr<Statement> parse_where(const std::string& str, std::vector<std::string>& column_name){
+std::vector<std::vector<std::string>> parse_index(const std::vector<std::string>& str_tokens){
+    int stack = 0;
+    bool check = true;
+    std::vector<std::vector<std::string>> ans;
+    std::vector<int> index_ans;
+    int i = str_tokens.size() - 1;
+    while(i >= 0){
+        if(stack == 0){
+            if(str_tokens[i] == "&&"){
+                index_ans.push_back(i);
+            }else{
+                check = false;
+            }
+        }
+        if (str_tokens[i] == "!" || str_tokens[i] == "|"){
+            stack;
+        } else if (precedence(str_tokens[i]) != 0){
+            --stack;
+        } else{
+            ++stack;
+        }
+        --i;
+    }
+    if(check){
+        for(int j: index_ans){
+            ans.push_back({str_tokens[j-3], str_tokens[j-2], str_tokens[j-1]});
+        }
+        ans.push_back({str_tokens[0], str_tokens[1], str_tokens[2]});
+    }
+    return ans;
+}
+
+std::shared_ptr<Statement> parse_where(const std::string& str, std::vector<std::string>& column_name, std::vector<std::vector<std::string>>& PCNF){
     std::string piece_str;
     std::stringstream all_str(str);
     std::vector<std::string> v;
@@ -1059,5 +1092,6 @@ std::shared_ptr<Statement> parse_where(const std::string& str, std::vector<std::
     }
 
     auto temp = infixToPostfix(v);
+    PCNF = parse_index(temp);
     return compile(temp, column_name);
 }

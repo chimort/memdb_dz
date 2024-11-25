@@ -3,6 +3,7 @@
 #include "Config.h"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <string>
 #include <vector>
@@ -15,8 +16,8 @@ namespace memdb
 class Table{
 public:
 
-    Table(const std::vector<config::ColumnSchema>& columns)
-        : schema_(columns) 
+        Table(const std::vector<config::ColumnSchema>& columns)
+        : schema_(columns)
     {
         for (const auto& column : schema_) {
             if (column.attributes[1]) { // autoincrement
@@ -27,9 +28,6 @@ public:
             }
         }
     }
-
-    std::vector<std::string> findByCol(const std::string& column_name,
-                            const config::ColumnValue& value) const;
 
     bool insertRecord(const std::unordered_map<std::string, std::string>& insert_values);
     // Метод для вставки без указания названий колонок
@@ -50,12 +48,16 @@ public:
     bool saveToCSV(std::ofstream& ofs) const;
     bool loadFromCSV(std::istream& is);
 
+    inline std::unordered_map<std::string,
+            std::unordered_multimap<std::size_t, int>> getIndices() const {return indices_; };
+    inline std::unordered_map<std::string, std::multimap<config::ColumnValue, int>> getOrderedIndices() const {return ordered_indices_;};
+    size_t makeHashKey(const config::ColumnValue& value) const;
+
 private:
     std::string convertColumnValueToString(const config::ColumnValue& value) const;
+
     std::vector<std::string> parseCSVLine(const std::string& line) const;
-    
     void indexRow(const int& id, const config::RowType& row);
-    size_t makeHashKey(const config::ColumnValue& value) const;
 
     bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
 

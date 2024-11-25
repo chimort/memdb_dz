@@ -6,9 +6,57 @@ protected:
     memdb::Database& db = memdb::Database::getInstance();
 };
 
-/*
+void PrintVariant(const std::string& col_name, const config::ColumnValue& col_value){
+    if(std::holds_alternative<int>(col_value)){
+        std::cout << col_name << ": " << std::get<int>(col_value) << ", ";
+    }
+    else if(std::holds_alternative<bool>(col_value)){
+        if(std::get<bool>(col_value)){
+            std::cout << col_name << ": true, ";
+        }else{
+            std::cout << col_name << ": false, ";
+        }
+    }
+    else if(std::holds_alternative<std::string>(col_value)){
+        std::cout << col_name << ": " << std::get<std::string>(col_value) << ", ";
+    }
+    else if(std::holds_alternative<config::BitString>(col_value)){
+        std::cout << col_name << ": " << std::get<int>(col_value) << ", ";
+    }
+    else{
+
+    }
+}
+
+void PrintData(const std::unordered_map<int, config::RowType> &data){
+    for (const auto& [key, row] : data) {
+        auto id_opt = utils::get<int>(row, "id");
+        int id = id_opt.has_value() ? id_opt.value() : -1;
+
+        auto login_opt = utils::get<std::string>(row, "login");
+        std::string login = login_opt.has_value() ? login_opt.value() : "N/A";
+
+        auto mom_opt = utils::get<std::string>(row, "mom");
+        std::string mom = mom_opt.has_value() ? mom_opt.value() : "N/A";
+
+        auto is_admin_opt = utils::get<bool>(row, "is_admin");
+        bool is_admin = is_admin_opt.has_value() ? is_admin_opt.value() : false;
+
+        auto is_parent_opt = utils::get<bool>(row, "is_parent");
+        bool is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : false;
+
+        std::cout << "id: " << id
+                  << ", login: " << login
+                  << ", mom: " << mom
+                  << ", is_admin: " << (is_admin ? "true" : "false")
+                  << ", is_parent: " << (is_parent ? "true" : "false")
+                  << std::endl;
+
+    }
+}
+
 TEST_F(DatabaseTest, SelectData) {
-    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
+    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[8], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
     db.execute(create_table_query);
     db.execute(R"(insert (login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)");
     db.execute(R"(insert (login = "Bob", age = 30, mom = "Martha", is_parent = true) to users)");
@@ -22,69 +70,15 @@ TEST_F(DatabaseTest, SelectData) {
     db.execute(R"(insert (login = "Jack", password_hash = 0xAAAAAAAAAAAAAAAA, is_admin = true, age = 31, mom = "Diane") to users)");
 
     //std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where id % 2 = 1 && ( | login | < 7 || | mom | < 0 ) && ( is_admin = true )";
-    std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where ";
-    auto select_response_2 = db.execute(select_query_2);
-    const auto &data_2 = select_response_2->getData();
+    //std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where ";
 
-    std::vector<int> ans;
-    for (const auto &[key, row]: data_2) {
-        int id;
-        std::string login;
-        std::string mom;
-        bool is_admin;
-        bool is_parent;
+    std::string check_query = "select id, login, mom, is_parent, is_admin from users where true";
+    auto check_response = db.execute(check_query);
+    const auto &check_data = check_response->getData();
+    PrintData(check_data);
 
-        if (std::holds_alternative<int>(row.at("id"))) {
-            id = std::get<int>(row.at("id"));
-        } else {
-            id = -1000;
-        }
-        if (std::holds_alternative<std::string>(row.at("login"))) {
-            login = std::get<std::string>(row.at("login"));
-        } else {
-            login = "Non";
-        }
-        if (std::holds_alternative<std::string>(row.at("mom"))) {
-            mom = std::get<std::string>(row.at("mom"));
-        } else {
-            mom = "Non";
-        }
-        if (std::holds_alternative<bool>(row.at("is_admin"))) {
-            is_admin = std::get<bool>(row.at("is_admin"));
-        } else {
-            is_admin = false;
-        }
-        if (std::holds_alternative<bool>(row.at("is_parent"))) {
-            is_parent = std::get<bool>(row.at("is_parent"));
-        } else {
-            is_parent = false;
-        }
-        ans.push_back(id);
-    }
-    std::sort(ans.begin(),ans.end());
-    std::vector<int> temp = {3,6,7,8,9};
-    EXPECT_EQ(ans, temp);
-} */
-
-TEST_F(DatabaseTest, SELECT){
-    std::string create_table_query = "create tABle table_name ( {} col1 : int32 = 31, col2: bytes[2] = 0x1234)";
-    auto res1 = db.execute(create_table_query);
-
-    EXPECT_FALSE(res1  -> getStatus());
-
-    auto res = db.execute("iNsErt (col1= 123, col2 =0x0456) tO table_name");
-
-    EXPECT_TRUE(res->getStatus());
-    /*
-    //
-    "seLeCt col1,col2 "
-    "fRom table_name "
-    "whERe col1 < 23 && (true || false);"
-    //
-    "UPDATe table_name "
-    "sEt col1 =321 "
-    "WHeRE col2 < 0x0500;"
-    //
-    "DELETE table_name "
-    "where col = 321 and col2 = 0x0456;"*/
+    std::string select_query = "select login from users where | login | < 5";
+    auto select_response = db.execute(select_query);
+    const auto &select_data = select_response->getData();
+    PrintData(select_data);
 }

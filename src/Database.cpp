@@ -59,6 +59,72 @@ bool Database::saveToFile(const std::string& filename, const std::string& table_
     return true;
 }
 
+std::unordered_set<int> intersect(const std::vector<std::vector<int>>& vectors) {
+    if (vectors.empty()) return {};
+
+    std::unordered_set<int> result(vectors[0].begin(), vectors[0].end());
+
+    for (size_t i = 1; i < vectors.size(); ++i) {
+        std::unordered_set<int> temp;
+        for (const auto &elem: vectors[i]) {
+            if (result.count(elem)) {
+                temp.insert(elem);
+            }
+        }
+        result = std::move(temp);
+    }
+    return result;
+}
+
+std::unordered_set<int> Database::record_index(const std::vector<std::vector<std::string>>& PCNF, const std::string& table_name) {
+    std::vector<std::vector<int>> ans;
+    if (PCNF.empty()) {
+        return intersect(ans);
+    }
+    for(const auto& item: PCNF) {
+        config::ColumnValue col_value;
+        std::string col_name;
+        for (int i = 0; i < 2; ++i) {
+            std::string str = item[i];
+            if (isNum(str)) {
+                col_value = atoi(str.c_str());
+            } else if (isStr(str)) {
+                col_value = str.substr(1, str.size() - 2);
+            } else if (isBool(str)) {
+                col_value = bool(str == "true");
+            } else if (isBitString(str)) {
+                config::BitString new_stmt(str.size() - 2);
+                for (int j = 2; j < str.size(); ++j) {
+                    new_stmt[j - 2] = str[j];
+                }
+                col_value = new_stmt;
+            } else {
+                col_name = str;
+            }
+        }
+        auto table = getTable(table_name);
+
+        if (item[2] == "=") {
+            auto [start_id, end_id] = table->getIndices()[col_name].equal_range(table->makeHashKey(col_value));
+            std::vector<int> num;
+            if(start_id!=end_id){}
+            for(auto temp = start_id; temp != end_id; ++temp){
+                num.push_back(temp->second);
+            }
+            ans.push_back(num);
+        }else if(item[2] == "<="){
+            std::vector<int> num;
+            auto it_lower = table->getOrderedIndices()[col_name].begin();
+            auto it_upper = table->getOrderedIndices()[col_name].upper_bound(col_value);
+            for(auto temp = it_lower; temp != it_upper; ++temp){
+                num.push_back(temp->second);
+            }
+            ans.push_back(num);
+        }
+    }
+    return intersect(ans);
+}
+
 std::unique_ptr<Response> Database::execute(const std::string_view &str)
 {
     std::string query = {str.begin(), str.end()};
@@ -145,7 +211,8 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
 
             auto condition = parser.getCondition();
             std::vector<std::string> column_name;
-            auto expression = parse_where(condition, column_name);
+            std::vector<std::vector<std::string>> PCNF;
+            auto expression = parse_where(condition, column_name, PCNF);
 
             std::set<int> ids; // id для удаления
 
@@ -253,12 +320,17 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             auto condition = parser.getCondition();
 
             std::vector<std::string> column_name;
-            auto Expression = parse_where(condition, column_name);
+            std::vector<std::vector<std::string>> PCNF;
+            auto Expression = parse_where(condition, column_name, PCNF);
+            auto recordIndex = record_index(PCNF, table_name);
 
             //надо будет написать проверку на выражение
 
             std::vector<config::ColumnValue> statement(column_name.size());
             for( auto row : table_it->second->getData()){
+                if(!recordIndex.empty() && recordIndex.find(row.first) == recordIndex.end()){
+                    continue;
+                }
                 for(int i = 0; i < column_name.size(); ++i) {
                     statement[i] = row.second[column_name[i]];
                 }
@@ -298,7 +370,8 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             auto condition = parser.getCondition();
 
             std::vector<std::string> column_name;
-            auto Expression = parse_where(condition, column_name);
+            std::vector<std::vector<std::string>> PCNF;
+            auto Expression = parse_where(condition, column_name, PCNF);
 
             //надо будет написать проверку на выражение
 
@@ -320,7 +393,8 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                     config::RowType new_row;
                     for( auto val_col : assignment){
                         std::vector<std::string> assignment_column_name;
-                        auto assignment_Expression = parse_where(val_col.second, assignment_column_name);
+                        std::vector<std::vector<std::string>> PCNF;
+                        auto assignment_Expression = parse_where(val_col.second, assignment_column_name, PCNF);
                         std::vector<config::ColumnValue> assignment_statement(assignment_column_name.size());
                         for(int i = 0; i < assignment_column_name.size(); ++i) {
                             assignment_statement[i] = row.second[assignment_column_name[i]];
