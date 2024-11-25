@@ -71,7 +71,11 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
                 if (!convertValue(column_schema.default_value, column_schema, default_value)) {
                     return false;
                 }
-                row[column_name] = default_value;
+                if (column_schema.attributes[0]) {
+                    row[column_name] = std::monostate{};
+                } else {
+                    row[column_name] = default_value;
+                }
             } else {
                 if (column_schema.attributes[0] || column_schema.attributes[2]) {
                     if (unique_null_value_[column_name]) {
@@ -93,7 +97,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     if (!indices_.empty() || !ordered_indices_.empty()){
         insertIndices(id, row);
     }
-    
+
     return true;
 }
 
@@ -113,9 +117,6 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         const std::string& column_name = column_schema.name;
         config::ColumnValue value;
 
-        if (column_schema.attributes[0] && !column_schema.default_value.empty()) {
-            return false;
-        }
 
         if (!convertValue(insert_values[i], column_schema, value)) {
             return false; 
@@ -139,7 +140,6 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
         if (column_schema.attributes[1]) {
             if (!std::holds_alternative<int>(value)) {
-                std::cout << "!!!!!!!!!";
                 return false;
             }
             int provided_value = std::get<int>(value);

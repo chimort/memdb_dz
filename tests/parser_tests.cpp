@@ -8,7 +8,7 @@ using namespace memdb;
 using namespace parser; 
 
 TEST(QueryParserTest, CreateTableTestSimple) {
-    std::string create_query = R"(CREATE\n\nTABLE users ({key, unique}   id: int32, \n login: string[32]="Привет, БД.", password_hash: bytes[9] = 0x1341, is_admin : bool   = false))";
+    std::string create_query = R"(CREATE\n\nTABLE users ({key, unique}   id: int32 = 5, \n login: string[32]="Привет, БД.", password_hash: bytes[9] = 0x1341, is_admin : bool   = false))";
     QueryParser parser(create_query);
     
     std::cout << "Testing query: " << create_query << std::endl;
@@ -384,7 +384,7 @@ TEST(QueryParserTest, SelectParseTestSimple) {
 }
 
 TEST(QueryParserTest, SelectParseTestConditions) {
-    std::string create_query = R"(SelEct id, login fRoM users WHErE (is_admin != 'Abdylla' || |is_admin| > 10) && id = 5 && task < 20) ^^ done > 0x5321)";
+    std::string create_query = R"(SelEct id, login fRoM  users WHErE ( is_admin != 'Abdylla' || |is_admin| > 10) && id = 5 && task < 20) ^^ done > 0x5321)";
     std::cout << create_query << std::endl;
     QueryParser parser(create_query);
 
