@@ -6,6 +6,77 @@ protected:
     memdb::Database& db = memdb::Database::getInstance();
 };
 
+void PrintVariant(const std::string& col_name, const config::ColumnValue& col_value){ 
+    if(std::holds_alternative<int>(col_value)){ 
+        std::cout << col_name << ": " << std::get<int>(col_value) << ", "; 
+    } 
+    else if(std::holds_alternative<bool>(col_value)){ 
+        if(std::get<bool>(col_value)){ 
+            std::cout << col_name << ": true, "; 
+        }else{ 
+            std::cout << col_name << ": false, "; 
+        } 
+    } 
+    else if(std::holds_alternative<std::string>(col_value)){ 
+        std::cout << col_name << ": " << std::get<std::string>(col_value) << ", "; 
+    } 
+    else if(std::holds_alternative<config::BitString>(col_value)){ 
+        auto temp = std::get<config::BitString>(col_value); 
+        std::cout << col_name << ": "; 
+        for(const auto& te: temp){ 
+            std::cout << te; 
+        } 
+        std::cout << col_name << ", "; 
+    } 
+    else{ 
+        std::cout << col_name << ": NULL, "; 
+    } 
+} 
+ 
+void PrintData(const std::unordered_map<int, config::RowType> &data, const std::string& query){ 
+    std::cout << " << " << query << " >>\n"; 
+    for (const auto& [key, row] : data) { 
+        for(const auto& [col_name, col_value] : row){ 
+            PrintVariant(col_name, col_value); 
+        } 
+        std::cout << "\n"; 
+    } 
+    std::cout << "\n"; 
+} 
+ 
+int main() { 
+    memdb::Database& db = memdb::Database::getInstance(); 
+ 
+    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[8], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)"; 
+    db.execute(create_table_query); 
+    db.execute(R"(insert (id = 1, login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)"); 
+    db.execute(R"(insert (id = 2, login = "Bob", age = 30, mom = "Martha", is_parent = true) to users)"); 
+    db.execute(R"(insert (id = 3, login = "Carol", password_hash = 0x3333333333333333, is_admin = false, age = 22, is_parent = false) to users)"); 
+    db.execute(R"(insert (id = 4, login = "Dave", password_hash = 0x4444444444444444, is_admin = true, age = 15, mom = "Sara", is_parent = true) to users)"); 
+    db.execute(R"(insert (id = 5, login = "Eve", password_hash = 0x5555555555555555, is_admin = false, mom = "Nancy", is_parent = false) to users)"); 
+    db.execute(R"(insert (id = 6, login = "Frank", is_admin = true, age = 40) to users)"); 
+    db.execute(R"(insert (id = 7, login = "Grace", password_hash = 0x7777777777777777, is_admin = false, age = 29, mom = "Judy", is_parent = true) to users)"); 
+    db.execute(R"(insert (id = 8, password_hash = 0x8888888888888888, is_admin = true, mom = "Eve", is_parent = false) to users)"); 
+    db.execute(R"(insert (id = 9, login = "Ivy", password_hash = 0x9999999999999999, is_admin = false, age = 23, mom = "Helen", is_parent = true) to users)"); 
+    db.execute(R"(insert (id = 10, login = "Jack", password_hash = 0xAAAAAAAAAAAAAAAA, is_admin = true, age = 31, mom = "Diane") to users)"); 
+ 
+//std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where id % 2 = 1 && ( | login | < 7 || | mom | < 0 ) && ( is_admin = true )"; 
+//std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where "; 
+ 
+    std::string check_query = "select id, login, mom, is_parent, is_admin from users where true"; 
+    auto check_response = db.execute(check_query); 
+    const auto &check_data = check_response->getData(); 
+    PrintData(check_data, check_query); 
+ 
+ 
+    std::string select_query = "select login, id, is_parent from users where password_hash = 0x1234 && age = 5 && ( ( mom <= \"alice\" && age > 10 ) || ( id < 5 && login >= \"vasya\" && is_parent = true ) ) && is_admin = false"; 
+    auto select_response = db.execute(select_query); 
+    const auto &select_data = select_response->getData(); 
+    PrintData(select_data, select_query); 
+}
+
+
+
 /*
 TEST_F(DatabaseTest, SelectData) {
     std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
@@ -66,77 +137,114 @@ TEST_F(DatabaseTest, SelectData) {
     EXPECT_EQ(ans, temp);
 } */
 
-TEST_F(DatabaseTest, SELECT){
-    std::string create_table_query = "create tABle table_name ( {} col1 : int32 = 31, col2: bytes[2] = 0x1234)";
-    auto res1 = db.execute(create_table_query);
+TEST_F(DatabaseTest, INSERT_implicit) {
+    std::string create_table_query = "create table technique ({unique} cars : string[32], {unique, autoincrement} cars_id : int32, {unique} phone_id : int32, {unique} phone : string[32])";
+    auto res = db.execute(create_table_query);
+    EXPECT_TRUE(res->getStatus());
 
-    EXPECT_FALSE(res1  -> getStatus());
+    std::string insert_query = R"(insert (cars = "Lada", phone = "vivo") to technique)";
+    auto res1 = db.execute(insert_query);
+    EXPECT_TRUE(res1->getStatus());
 
-    auto res = db.execute("iNsErt (col1= 123, col2 =0x0456) tO table_name");
+    std::string insert_query1 = R"(insert (, 5, "IPhone") to technique)";
+    auto res2 = db.execute(insert_query1);
+    EXPECT_TRUE(res2->getStatus());
+
+    auto table = db.getTable("technique");
+    auto data_after = table->getData();
+    for (const auto& [key, row] : data_after) {
+        auto id_opt = utils::get<std::string>(row, "cars"); 
+        auto id = id_opt.has_value() ? id_opt.value() : "N/A"; 
+ 
+        auto login_opt = utils::get<int>(row, "cars_id");
+        int login = login_opt.has_value() ? login_opt.value() : -1; 
+ 
+        auto is_parent_opt = utils::get<int>(row, "phone_id"); 
+        int is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : -1;
+
+        auto is_code = utils::get<std::string>(row, "phone");
+        auto code = is_code.has_value() ? is_code.value() : "N/A";
+ 
+        std::cout << "cars: " << id 
+                  << ", id_cars: " << login 
+                  << ", phone_id: " << is_parent
+                  << ", phone " << code
+                  << std::endl;
+    }
+
+    std::cout << std::endl;
+}
+
+TEST_F(DatabaseTest, SELECT) {
+    std::string create_table_query = "create tABle table_name ( {  } col1 : int32, col2 : bytes[2])";
+    auto res = db.execute(create_table_query);
+
+    EXPECT_TRUE(res  -> getStatus());
+
+    auto res1 = db.execute("iNsErt (col1= 123, col2 =0x0456) tO table_name");
+
+    EXPECT_TRUE(res1->getStatus());
+
+    std::string select_query = "Select col1, col2 from table_name where col1 = 123";
+    auto res2 = db.execute(select_query);
+
+    EXPECT_TRUE(res2 -> getStatus());
+
+    auto new_table = res2->getData();
+    for (auto& [key, rows] : new_table) {
+        for (auto& [column_name, row] : rows) {
+            if (std::get_if<int>(&row)) {
+                std::cout << column_name << " " << std::get<int>(row) << std::endl;
+            } else {
+                auto vec = std::get<std::vector<uint8_t>>(row);
+
+                std::cout << column_name << " ";
+                for (auto& it : vec) {
+                    std::cout << it;
+                }
+            }
+            std::cout << " ";
+        }
+    }
+
+    std::cout << std::endl;
+}
+
+TEST_F(DatabaseTest, UPDATE) {
+    std::string create_table_query = "create table room ({key, autoincrement} id : int32, occupants : string[5], beds : int32 = 3, beds_code : bytes[2] = 0x12)";
+    auto res = db.execute(create_table_query);
+
+    
+}
+
+TEST_F(DatabaseTest, CREATEINDEXS) {
+    std::string create_table_query = "create table medicine ({key, autoincrement} id : int32, doctors : string[32], equipment : bool)";
+    auto res = db.execute(create_table_query);
 
     EXPECT_TRUE(res->getStatus());
-    /*
-    //
-    "seLeCt col1,col2 "
-    "fRom table_name "
-    "whERe col1 < 23 && (true || false);"
-    //
-    "UPDATe table_name "
-    "sEt col1 =321 "
-    "WHeRE col2 < 0x0500;"
-    //
-    "DELETE table_name "
-    "where col = 321 and col2 = 0x0456;"*/
+
+    std::string create_index_query = "create ordered index on medicine by id, doctors";
+    auto res1 = db.execute(create_index_query);
+
+    EXPECT_TRUE(res1 -> getStatus());
 }
-TEST_F(DatabaseTest, INSERT) {
-    std::string create_table_query = "create table technique ({unique} cars : string[32], {unique, autoincrement} cars_id : int32, {unique, autoincrement} phone_id : int32, {unique, autoincrement} phone : string[32])";
-    auto res = db.execute(create_table_query);
-    EXPECT_TRUE(res);
 
-    std::string insert_query = "insert (cars = \"Lada\", phone = \"vivo\") to technique";
-    auto res1 = db.execute(insert_query);
-    EXPECT_TRUE(res1);
-
-    // auto table = db.getTable("technique");
-    // auto data_after = table->getData();
-    // for (const auto& [key, row] : data_after) { 
-    //     auto id_opt = utils::get<std::string>(row, "cars"); 
-    //     auto id = id_opt.has_value() ? id_opt.value() : "N/A"; 
- 
-    //     auto login_opt = utils::get<int>(row, "cars_id"); 
-    //     int login = login_opt.has_value() ? login_opt.value() : -1; 
- 
-    //     auto is_parent_opt = utils::get<int>(row, "phone_id"); 
-    //     int is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : -1;
-
-    //     auto is_code = utils::get<std::string>(row, "phone");
-    //     auto code = is_code.has_value() ? is_code.value() : "N/A";
- 
-    //     std::cout << "id_cars: " << id 
-    //               << ", cars: " << login 
-    //               << ", phone_id: " << (is_parent ? "true" : "false") 
-    //               << ", phone" << code
-    //               << std::endl;
-    // }
-
-
-}
 
 TEST_F(DatabaseTest, DELETE) {
     std::string create_table_query = "create tABle family ({unique} id : int32, name : string[32], isParent : bool, code : bytes[3])";
 
     auto res = db.execute(create_table_query);
-    EXPECT_TRUE(res);
+    EXPECT_TRUE(res->getStatus());
 
     auto res1 = db.execute(R"(insert (id = 1, name = "Anna", isParent = false, code = 0x0ffee3) to family)");
     auto res2 = db.execute(R"(insert (id = 2, name = "Ivan", isParent = true, code = 0x0e572f) to family)");
 
-    EXPECT_TRUE(res1);
-    EXPECT_TRUE(res2);
+    EXPECT_TRUE(res1->getStatus());
+    EXPECT_TRUE(res2->getStatus());
 
     std::string delete_query = R"(DELETE family where code = 0x0ffee3)";
     auto res3 = db.execute(delete_query);
-    EXPECT_TRUE(res3);
+    EXPECT_TRUE(res3->getStatus());
 
     auto table = db.getTable("family");
     auto data_after = table->getData();
@@ -156,9 +264,10 @@ TEST_F(DatabaseTest, DELETE) {
         std::cout << "id: " << id 
                   << ", name: " << login 
                   << ", is_parent: " << (is_parent ? "true" : "false") 
-                  << std::endl;
+                  << " code: ";
         for (auto& element_vector : code) {
             std::cout << element_vector << " ";
         }
+        std::cout << std::endl;
     }
 }

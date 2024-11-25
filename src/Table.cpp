@@ -50,7 +50,10 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
 
         row[column_name] = value;
 
-        if (column_schema.attributes[1]) { 
+        if (column_schema.attributes[1]) {
+            if (!std::holds_alternative<int>(value)) {
+                return false;
+            }
             int provided_value = std::get<int>(value);
             if (provided_value >= autoincrement_counters_[column_name]) {
                 autoincrement_counters_[column_name] = provided_value + 1;
@@ -110,6 +113,10 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         const std::string& column_name = column_schema.name;
         config::ColumnValue value;
 
+        if (column_schema.attributes[0] && !column_schema.default_value.empty()) {
+            return false;
+        }
+
         if (!convertValue(insert_values[i], column_schema, value)) {
             return false; 
         }
@@ -130,7 +137,11 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
         row[column_name] = value;
 
-        if (column_schema.attributes[1]) { 
+        if (column_schema.attributes[1]) {
+            if (!std::holds_alternative<int>(value)) {
+                std::cout << "!!!!!!!!!";
+                return false;
+            }
             int provided_value = std::get<int>(value);
             if (provided_value >= autoincrement_counters_[column_name]) {
                 autoincrement_counters_[column_name] = provided_value + 1;

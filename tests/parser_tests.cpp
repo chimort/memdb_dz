@@ -216,6 +216,8 @@ TEST(QueryParserTest, CreateTableTestRegisters) {
     
 }
 
+
+
 TEST(QueryParserTest, CreateIndexTestSimple) {
     std::string create_query = "crEatE uNordErED  \n  INdEX ON\n\n\nusers BY id, login";
     std::cout << "Testing query: " << create_query << std::endl;

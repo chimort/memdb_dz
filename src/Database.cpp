@@ -99,8 +99,6 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                         insert2[std::stoi(pair.first)] = pair.second;
                     }
                 }
-
-                
                 success = table->insertRecord(insert2);
             } else {
                 success = table->insertRecord(insert_values);
@@ -117,7 +115,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             break;
         } case parser::CommandType::CREATE_TABLE: {
             std::shared_ptr<Table> table = std::make_shared<Table>(parser.getCreateTableParametrs());
-            if (table == nullptr) {
+            if (!table) {
                 response->setStatus(false);
                 response->setMessage("Failed create table");                
             }
