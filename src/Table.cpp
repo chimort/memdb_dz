@@ -200,6 +200,7 @@ bool Table::deleteRow(const int& row_id)
         for (const auto &column : schema_) {
             const std::string& column_name = column.name;
             if (column.attributes[1]) {
+                unique_null_value_[column_name] = false;
                 auto value_it = row.find(column_name);
                 if (value_it != row.end()) {
                     const config::ColumnValue& value = value_it->second;
