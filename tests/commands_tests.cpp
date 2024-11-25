@@ -227,6 +227,8 @@ TEST_F(DatabaseTest, CREATEINDEXS) {
     auto res1 = db.execute(create_index_query);
 
     EXPECT_TRUE(res1 -> getStatus());
+
+    
 }
 
 
