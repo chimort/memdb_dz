@@ -5,10 +5,11 @@
 int main() {
 
     memdb::Database &db = memdb::Database::getInstance();
-    std::string create_table_query = "create table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
+    std::string create_table_query = "creatE table users ({key, autoincrement} id : int32, {unique} login: string[32], password_hash: bytes[8], is_admin: bool = false, age: int32, mom: string[32], is_parent: bool)";
     db.execute(create_table_query);
-    db.execute(R"(insert (login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)");
-    db.execute(R"(insert (login = "Bob", age = 30, mom = "Martha", is_parent = true) to users)");
+    db.execute(R"(inseRt (login = "Alice", password_hash = 0x1111111111111111, is_admin = true, age = 25, mom = "Eve") to users)");
+    db.execute(R"(insert (login = "vasya", age = 30, mom = "Martha", is_parent = true) to users)");
+
     db.execute(R"(insert (login = "Carol", password_hash = 0x3333333333333333, is_admin = false, age = 22, is_parent = false) to users)");
     db.execute(R"(insert (login = "Dave", password_hash = 0x4444444444444444, is_admin = true, age = 35, mom = "Sara", is_parent = true) to users)");
     db.execute(R"(insert (login = "Eve", password_hash = 0x5555555555555555, is_admin = false, mom = "Nancy", is_parent = false) to users)");
@@ -20,7 +21,10 @@ int main() {
     //std::string select_query_2 = "select id, login, mom, is_parent, is_admin from users where id % 2 = 1 && ( | login | < 7 || | mom | < 0 ) && ( is_admin = true )";
 
     std::cout << "Содержимое таблицы до удаления:" << std::endl;
-
+    auto indexes = db.execute("create unordered index on users by is_admin, login");
+    if (!indexes) {
+        std::cout << "dfugjdfsngjfdsg" << std::endl;
+    }
     auto select_response_before = db.execute("select id, login, mom, is_parent, is_admin from users where true");
     if (!select_response_before->getStatus()) {
         std::cout << "sdgdsg" << std::endl;
@@ -51,12 +55,14 @@ int main() {
                   << std::endl;
     }
 
-    auto delete_response = db.execute("delEte users where false = true");
+    auto delete_response = db.execute("update users set is_admin = true where login = \"vasya\"");
+
     if (!delete_response->getStatus()) {
         std::cerr << "Ошибка при удалении: " << delete_response->getMessage() << std::endl;
     }
 
-    std::cout << "\nСодержимое таблицы после удаления:" << std::endl;
+    std::cout << "\nСодержимое таблицы после обновления:" << std::endl;
+
 
     auto select_response_after = db.execute("select id, login, mom, is_parent, is_admin from users where true");
     const auto& data_after = select_response_after->getData();
@@ -85,7 +91,9 @@ int main() {
                   << std::endl;
     }
 
-    auto dr = db.execute("delete users where is_admin = true");
+    auto dr = db.execute("update users set login = login + \"_deleted\", is_admin = false where\n"
+                         "password_hash < 0x71");
+
     if (!dr->getStatus()) {
         std::cerr << "Ошибка при удалении: " << dr->getMessage() << std::endl;
     }

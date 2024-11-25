@@ -90,8 +90,8 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     data_[id] = row;
 
 
-    if (indices_.size() != 0){
-        fillUnordered(id, row);
+    if (!indices_.empty() || !ordered_indices_.empty()){
+        insertIndices(id, row);
     }
     
     return true;
@@ -173,7 +173,10 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
     int id;
     id = next_id_++;
-
+    
+    if (!indices_.empty() || !ordered_indices_.empty()) {
+        insertIndices(id, row);
+    }
     data_[id] = row;
     return true;
 }
@@ -184,37 +187,92 @@ bool Table::insertRowType(const config::RowType& row) {
 
     data_[id] = row;
 
-    if (indices_.size() != 0){
-        fillUnordered(id, row);
-    }
-
     return true;
 }
 
-bool Table::deleteRow(const int& row_id) 
+bool Table::updateRowType(int record_id, const config::RowType& new_row) {
+    for(const auto &temp: new_row){
+        data_[record_id][temp.first] = temp.second;
+    }
+    return true;
+}
+
+bool Table::deleteRow(const int& row_id)
 {
     auto it = data_.find(row_id);
     if (it != data_.end()) {
-        removeFromUnorderedIndices(row_id, it->second);
+        removeFromIndices(row_id);
         data_.erase(it);
+        
         return true;
     }
     return false;
 }
 
-void Table::removeFromUnorderedIndices(const int& row_id, const config::RowType& row) 
+void Table::removeFromIndices(const int& row_id)
 {
-    for (auto& [column_name, index_map] : indices_) {
-        auto it = row.find(column_name);
-        if (it != row.end()) {
-            const auto& value = it->second;
-            size_t hash_value = makeHashKey(value);
-            auto& index = index_map;
+    for (const auto& column_schema : schema_) {
+        const std::string &column_name = column_schema.name;
+        const auto &value = data_[row_id][column_name];
 
+        if (column_schema.ordering == config::IndexType::UNORDERED) {
+            size_t hash_value = makeHashKey(value);
+            auto &index = indices_[column_name];
             auto range = index.equal_range(hash_value);
-            for (auto iter = range.first; iter != range.second; ) {
+            for (auto iter = range.first; iter != range.second;) {
                 if (iter->second == row_id) {
                     iter = index.erase(iter);
+                } else {
+                    ++iter;
+                }
+            }
+        }
+
+        if (column_schema.ordering == config::IndexType::ORDERED) {
+            auto &ordered_index = ordered_indices_[column_name];
+            auto range = ordered_index.equal_range(value);
+            for (auto iter = range.first; iter != range.second;) {
+                if (iter->second == row_id) {
+                    iter = ordered_index.erase(iter);
+                } else {
+                    ++iter;
+                }
+            }
+        }
+    }
+}
+
+void Table::updateIndices(const int& row_id, const config::RowType& new_row)
+{
+    for (const auto& column_schema : schema_) {
+        const std::string &column_name = column_schema.name;
+        if(new_row.find(column_name) == new_row.end()){
+            continue;
+        }
+        const auto &value = data_[row_id][column_name];
+        if (column_schema.ordering == config::IndexType::UNORDERED) {
+            size_t hash_value = makeHashKey(value);
+            auto &index = indices_[column_name];
+            auto range = index.equal_range(hash_value);
+            for (auto iter = range.first; iter != range.second;) {
+                if (iter->second == row_id) {
+                    index.erase(iter);
+                    index.insert({makeHashKey(new_row.at(column_name)), row_id});
+                    break;
+                } else {
+                    ++iter;
+                }
+            }
+        }
+
+        if (column_schema.ordering == config::IndexType::ORDERED) {
+            auto &ordered_index = ordered_indices_[column_name];
+            auto range = ordered_index.equal_range(value);
+            for (auto iter = range.first; iter != range.second;) {
+                if (iter->second == row_id) {
+                    ordered_index.erase(iter);
+                    ordered_index.insert({new_row.at(column_name), row_id});
+                    break;
                 } else {
                     ++iter;
                 }
@@ -269,7 +327,7 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
         case config::ColumnType::BITSTRING: {
             if (value_str.size() > 2 && value_str[0] == '0' && (value_str[1] == 'x' || value_str[1] == 'X')) {
                 std::string hex_str = value_str.substr(2);
-                if (hex_str.size() > column_schema.max_size * 2) {
+                if (hex_str.size() > column_schema.max_size * 2 || hex_str.size()%2 == 1) {
                     return false;
                 }
                 config::BitString bit_string;
@@ -296,41 +354,66 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
     }
 }
 
+bool Table::createIndex(const std::vector<std::string>& columns_name, config::IndexType index_type) {
+    for (const auto& column_name : columns_name) {
+        bool found = false;
+        for (auto& column_schema : schema_) {
+            if (column_schema.name == column_name) {
+                column_schema.ordering = index_type;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            return false;
+        }
 
-bool Table::createUnorderedIndex(const std::vector<std::string>& columns_name){
-
-    for (auto& str : columns_name) {
-        auto index = indices_.find(str);
-        if (index == indices_.end()) {
-            for (auto& [id, row] : data_) {
-                size_t hash_value = makeHashKey(row[str]);
-                indices_[str].emplace(hash_value, id);
+        if (index_type == config::IndexType::UNORDERED) {
+            if (indices_.find(column_name) == indices_.end()) {
+                std::unordered_multimap<std::size_t, int> index;
+                indices_[column_name] = index;
+                for (const auto& [id, row] : data_) {
+                    auto it = row.find(column_name);
+                    if (it != row.end()) {
+                        const auto& value = it->second;
+                        size_t hash_value = makeHashKey(value);
+                        indices_[column_name].emplace(hash_value, id);
+                    }
+                }
+            }
+        } else if (index_type == config::IndexType::ORDERED) {
+            if (ordered_indices_.find(column_name) == ordered_indices_.end()) {
+                std::multimap<config::ColumnValue, int> index;
+                ordered_indices_[column_name] = index;
+                for (const auto& [id, row] : data_) {
+                    auto it = row.find(column_name);
+                    if (it != row.end()) {
+                        const auto& value = it->second;
+                        ordered_indices_[column_name].emplace(value, id);
+                    }
+                }
             }
         }
     }
     return true;
 }
 
-bool Table::fillUnordered(const int& id, const config::RowType row) {
-    for (auto& [col_name, col_value] : row) {
-        for (auto& col_schema : schema_)
-        if (col_name == col_schema.name && col_schema.ordering == config::IndexType::UNORDERED) {
-            size_t hash_value = makeHashKey(col_value);
-            indices_[col_name].emplace(hash_value, id);
-        }
-    }
-    return true;
-}
-
-
-void Table::indexRow(const int& id, const config::RowType& row) {
+void Table::insertIndices(const int& id, const config::RowType& row)
+{
     for (const auto& column_schema : schema_) {
         const std::string& column_name = column_schema.name;
         auto it = row.find(column_name);
         if (it != row.end()) {
             const auto& value = it->second;
-            size_t hash_value = makeHashKey(value);
-            indices_[column_name].emplace(hash_value, id);
+            
+            if (column_schema.ordering == config::IndexType::UNORDERED) {
+                size_t hash_value = makeHashKey(value);
+                indices_[column_name].emplace(hash_value, id);
+            }
+            
+            if (column_schema.ordering == config::IndexType::ORDERED) {
+                ordered_indices_[column_name].emplace(value, id);
+            }
         }
     }
 }

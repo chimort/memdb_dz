@@ -171,48 +171,57 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             break;
         } case parser::CommandType::CREATE_INDEX: {
             auto table_name_opt = parser.getTableName();
-
             const std::string table_name = table_name_opt;
 
             auto table_it = tables_.find(table_name);
             if (table_it == tables_.end()) {
                 response->setStatus(false);
-                response->setMessage("Table not found for insert");
+                response->setMessage("Table '" + table_name + "' not found");
                 return response;
             }
 
             auto& table = table_it->second;
-            bool success;
+            auto column_index_type = parser.getCreateIndexType(); // std::unordered_map<std::string, config::IndexType>
+            auto table_columns = table->getSchema();
 
-            auto queryIndexs = parser.getCreateIndexType();
-            std::vector<config::ColumnSchema> columns = table->getSchema();
-            std::vector<std::string> columns_name;
-            bool flag = false;
-            for (auto& column : columns) {
-                for (auto& [name_column_query, queryType] : queryIndexs) {
-                    if (column.name == name_column_query) {
-                        columns_name.push_back(column.name);
-                        column.ordering = queryType;
-                        flag = true;
+            bool columns_exist = true;
+            bool index_created = false;
+
+            for (const auto& [column_name, index_type] : column_index_type) {
+                bool found = false;
+                for (const auto& col_schema : table_columns) {
+                    if (col_schema.name == column_name) {
+                        found = true;
+                        break;
                     }
                 }
+                if (!found) {
+                    columns_exist = false;
+                    response->setStatus(false);
+                    response->setMessage("Column '" + column_name + "' does not exist in table '" + table_name + "'");
+                    return response;
+                }
+
+                bool createIndex_res = table->createIndex({column_name}, index_type);
+                if (!createIndex_res) {
+                    response->setStatus(false);
+                    response->setMessage("Failed to create index on column '" + column_name + "'");
+                    return response;
+                }
+                index_created = true;
             }
 
-
-            if (!flag) {
+            if (!index_created) {
                 response->setStatus(false);
-                response->setMessage("Compatibility colums error");
+                response->setMessage("No indices were created");
                 return response;
             }
 
-            if (queryIndexs.begin()->second == config::IndexType::UNORDERED){
-                bool createIndex_res = table->createUnorderedIndex(columns_name);
-            }
-            
-
+            response->setStatus(true);
+            response->setMessage("Index(es) created successfully");
             break;
-        }
-        case parser::CommandType::SELECT: {
+
+        } case parser::CommandType::SELECT: {
             auto table_name_opt = parser.getTableName();
             const auto& selected_columns = parser.getSelectedCol();
 
@@ -244,6 +253,8 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             std::vector<std::string> column_name;
             auto Expression = parse_where(condition, column_name);
 
+            //надо будет написать проверку на выражение
+
             std::vector<config::ColumnValue> statement(column_name.size());
             for( auto row : table_it->second->getData()){
                 for(int i = 0; i < column_name.size(); ++i) {
@@ -266,6 +277,60 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             }
             response->setStatus(true);
             response->setData(new_Table.getData());
+            break;
+        }
+
+        case parser::CommandType::UPDATE: {
+            auto table_name_opt = parser.getTableName();
+            const auto& assignment = parser.getUpdateValues();
+
+            const std::string table_name = table_name_opt;
+
+            auto table_it = tables_.find(table_name);
+            if (table_it == tables_.end()) {
+                response->setStatus(false);
+                response->setMessage("Table not found for select");
+                return response;
+            }
+
+            auto condition = parser.getCondition();
+
+            std::vector<std::string> column_name;
+            auto Expression = parse_where(condition, column_name);
+
+            //надо будет написать проверку на выражение
+
+            std::vector<config::ColumnValue> statement(column_name.size());
+            //надо будет проверить налиие колонки;
+            for( auto row : table_it->second->getData()){
+
+                for(int i = 0; i < column_name.size(); ++i) {
+                    statement[i] = row.second[column_name[i]];
+                }
+                auto ans = Expression ->apply(statement);
+                bool isWhere = false ;
+                if(std::holds_alternative<std::monostate>(ans[column_name.size()])){
+                    isWhere = true;
+                }else if(std::get<bool>(ans[column_name.size()])){
+                    isWhere = true;
+                }
+                if(isWhere){
+                    config::RowType new_row;
+                    for( auto val_col : assignment){
+                        std::vector<std::string> assignment_column_name;
+                        auto assignment_Expression = parse_where(val_col.second, assignment_column_name);
+                        std::vector<config::ColumnValue> assignment_statement(assignment_column_name.size());
+                        for(int i = 0; i < assignment_column_name.size(); ++i) {
+                            assignment_statement[i] = row.second[assignment_column_name[i]];
+                        }
+                        auto assignment_ans = assignment_Expression ->apply(assignment_statement);
+                        new_row[val_col.first] = assignment_ans[assignment_column_name.size()];
+                    }
+                    tables_[table_name]->updateIndices(row.first, new_row);
+                    tables_[table_name]->updateRowType(row.first, new_row);
+                }
+            }
+            response->setStatus(true);
             break;
         }
 
