@@ -8,6 +8,7 @@
 #include <vector>
 #include <tuple>
 #include <variant>
+#include <set>
 
 namespace memdb
 {
@@ -20,7 +21,7 @@ public:
     {
         for (auto& column : schema_) {
             if (column.attributes[1]) { // autoincrement
-                autoincrement_counters_[column.name] = 0;
+                autoincrement_counters_[column.name] = {};
             }
             if (column.attributes[0] || column.attributes[2]) {
                 unique_null_value_[column.name] = false;
@@ -60,13 +61,16 @@ private:
 
     bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
 
+    int findMinUnusedId(const std::string& column_name);
+
     std::vector<config::ColumnSchema> schema_;
     std::unordered_map<int, config::RowType> data_;
+
     std::unordered_map<std::string,
         std::unordered_multimap<std::size_t, int>> indices_;
     std::unordered_map<std::string, std::multimap<config::ColumnValue, int>> ordered_indices_;
 
-    std::unordered_map<std::string, int> autoincrement_counters_;
+    std::unordered_map<std::string, std::set<int>> autoincrement_counters_;
     std::unordered_map<std::string, bool> unique_null_value_;
     
     
