@@ -416,8 +416,13 @@ TEST_F(TableTest, AutoIncrementIdAndDuplicateCheck) {
     };
     EXPECT_FALSE(table.insertRecord(record2));
 
+    std::unordered_map<std::string, std::string> record3= {
+        {"name", "Alice"}
+    };
+    EXPECT_TRUE(table.insertRecord(record3));
+
     // Проверяем, что в таблице только одна запись
-    EXPECT_EQ(table.getData().size(), 1);
+    EXPECT_EQ(table.getData().size(), 2);
 }
 
 // Тест вставки строки и битовой последовательности, превышающих максимальный размер

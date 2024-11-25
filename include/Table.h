@@ -18,12 +18,16 @@ public:
     Table(const std::vector<config::ColumnSchema>& columns)
         : schema_(columns) 
     {
-        for (const auto& column : schema_) {
+        for (auto& column : schema_) {
             if (column.attributes[1]) { // autoincrement
                 autoincrement_counters_[column.name] = 0;
             }
-            if (column.attributes[0]) {
+            if (column.attributes[0] || column.attributes[2]) {
                 unique_null_value_[column.name] = false;
+            }
+            if (column.attributes[2]) {
+                indices_[column.name] = {};
+                column.ordering = config::IndexType::UNORDERED;
             }
         }
     }

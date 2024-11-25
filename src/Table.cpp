@@ -35,7 +35,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         }
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
-            if (indices_.find(column_name) != indices_.end()) {
+            if (indices_[column_name].size() > 1 && indices_.find(column_name) != indices_.end()) {
                 if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
                     return false;
                 }
@@ -115,7 +115,7 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         }
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
-            if (indices_.find(column_name) != indices_.end()) {
+            if (indices_[column_name].size() > 1 && indices_.find(column_name) != indices_.end()) {
                 if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
                     return false;
                 }
