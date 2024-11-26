@@ -135,25 +135,34 @@ TEST_F(DatabaseTest, SELECT) {
 }
 
 TEST_F(DatabaseTest, SELECT_1) {
-    std::string create_table_query = "create table workers ({key, autoincrement} id : int32, name : string[20], salary : int32 = 1200, work_time : bytes[4], fix_time : bytes[3] = 0x5414)";
+    std::string create_table_query = "create table workers ({key, autoincrement} id : int32, name : string[20], salary : int32 = 1200, work_time : bytes[4], fix_time : bytes[4] = 0x5414)";
     auto res = db.execute(create_table_query);
     EXPECT_TRUE(res);
 
     for (int i = 10; i < 100; ++i) {
-        if (i % 5 == 0) {
-            std::string insert_query = "insert (name = user" + std::to_string(i) + ", salary = " + std::to_string(i) + ", work_time = 0x" + std::to_string(i) + ") to workers";
+            std::string insert_query = "insert (name = user" + std::to_string(i) + ", salary = " + std::to_string(i % 5) + ", work_time = 0x" + std::to_string(i) + ") to workers";
             auto res_insert = db.execute(insert_query);
             EXPECT_TRUE(res_insert);
-        }
     }
     PrintData(db.getTable("workers")->getData(), create_table_query);
 
-    std::string select_query = R"(select name from workers where id <= salary + 20 )";
+    std::string select_query = R"(select name from workers where id * 2 = salary )";
     auto res_select = db.execute(select_query);
     EXPECT_TRUE(res_select -> getStatus());
     std::cout << res_select -> getMessage();
-
+    std::cout << "Select1: " << std::endl;
     PrintData(res_select->getData(), select_query);
+    
+    std::string select_query1 = R"(select name from workers where | fix_time | = 0 - id / 5 )";
+    auto res_select1 = db.execute(select_query1);
+    EXPECT_TRUE(res_select1 -> getStatus());
+    std::cout << res_select1 -> getMessage();
+    
+    std::cout << "Select2: " << std::endl;
+    PrintData(res_select1->getData(), select_query1);
+
+
+    std::string select_query2 = R"(select )";
 }
 
 TEST_F(DatabaseTest, UPDATE) {
