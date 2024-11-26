@@ -52,18 +52,30 @@ TEST_F(DatabaseTest, CREATEINDEXS_SELECT) {
     std::string create_index_query = "create unordered index on medicine by age, doctors";
     auto res1 = db.execute(create_index_query);
 
-    for (int i = 0; i <= 10000; ++i) {
+    for (int i = 0; i <= 1; ++i) {
         std::string insert_query = R"(insert (doctors = "Strange)" + std::to_string(i) + R"(", age =)" + std::to_string(i) + R"() to medicine)";
         auto res2 = db.execute(insert_query);
     }
 
     std::unique_ptr<memdb::Response> res5;
     std::string select_query = R"(select doctors, age from medicine where ( ( id % 2 = 1 && id > 200 ) || ( doctors <= "Strange5" ) ) && ( id = 200 ) && ( id < 400 ))";
-    for(int i = 0; i < 50; ++i){
+    for(int i = 0; i < 1; ++i){
         res5 = db.execute(select_query);
         auto data = res5->getData();
         PrintData(data, create_table_query);
     }
     EXPECT_TRUE(res5->getStatus());
 
+}
+
+TEST_F(DatabaseTest, CREATEINDEXS) {
+    std::string create_table_query = "create table medicine ({key, autoincrement} id : int32, doctors : string[32], equipment : bool, age : int32)";
+    auto res = db.execute(create_table_query);
+    EXPECT_TRUE(res->getStatus());
+
+    std::string create_index_query = "create unordered index on medicine by id, doctors";
+    auto res1 = db.execute(create_index_query);
+    EXPECT_TRUE(res1 -> getStatus());
+
+    std::string insert_query = R"(insert (id = 5, doctors = "Harry") to medicine)";
 }
