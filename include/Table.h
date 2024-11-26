@@ -16,8 +16,8 @@ namespace memdb
 
 class Table{
 public:
-
-        Table(const std::vector<config::ColumnSchema>& columns)
+    Table() : next_id_(0) {}
+    explicit Table(const std::vector<config::ColumnSchema>& columns)
         : schema_(columns)
     {
         for (auto& column : schema_) {
@@ -60,9 +60,12 @@ private:
 
     std::string convertColumnValueToString(const config::ColumnValue& value) const;
     std::vector<std::string> parseCSVLine(const std::string& line) const;
-
+    void parseAttributes(const std::string& attributes_str, bool attributes[3]);
+    std::string serializeAttributes(const bool attributes[3]) const;
+    std::string columnTypeToString(config::ColumnType type) const;
+    std::vector<config::ColumnSchema> parseSchemaLine(const std::string& schema_line);
+    
     size_t makeHashKey(const config::ColumnValue& value) const;
-    void indexRow(const int& id, const config::RowType& row);
 
     bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
 
