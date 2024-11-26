@@ -29,7 +29,7 @@ public:
             }
             if (column.attributes[2]) {
                 indices_[column.name] = {};
-                column.ordering.unordered;
+                column.ordering.unordered = true;
                 has_index_ = true;
             }
         }

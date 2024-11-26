@@ -53,7 +53,9 @@ TEST_F(DatabaseTest, CREATEINDEXS_SELECT) {
     auto res1 = db.execute(create_index_query);
 
     for (int i = 0; i <= 1; ++i) {
-        std::string insert_query = R"(insert (doctors = "Strange)" + std::to_string(i) + R"(", age =)" + std::to_string(i) + R"() to medicine)";
+        std::string insert_query =
+                R"(insert (doctors = "Strange)" + std::to_string(i) + R"(", age =)" + std::to_string(i) +
+                R"() to medicine)";
         auto res2 = db.execute(insert_query);
     }
 }
