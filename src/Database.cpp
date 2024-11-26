@@ -315,7 +315,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                 for ( auto old_s : schema){
                     if(old_s.name == new_s){
                         if(old_s.type == config::ColumnType::INT){
-                            statement.push_back(0);
+                            statement.push_back(300405);
                         }else if(old_s.type == config::ColumnType::STRING){
                             statement.push_back("");
                         }else if(old_s.type == config::ColumnType::BOOL){
@@ -336,6 +336,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             Table new_Table(new_schema);
             statement.assign(column_name.size()+1, 0);
             for( auto row : table_it->second->getData()){
+                statement.assign(column_name.size()+1, 0);
                 if(is_index && recordIndex.find(row.first) == recordIndex.end()){
                     continue;
                 }

@@ -147,10 +147,10 @@ public:
         config::ColumnValue a = in[in.size() - 1];
         config::ColumnValue b = in[in.size() - 2];
 
-        if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
+        if (std::holds_alternative<int>(b) && std::holds_alternative<int>(a)) {
             in.pop_back();
             in.pop_back();
-            if (std::get<int>(b) != 0) {
+            if (std::get<int>(a) != 0) {
                 in.emplace_back(std::get<int>(b) / std::get<int>(a));
             } else {
                 in.emplace_back(std::monostate());
@@ -858,6 +858,10 @@ std::shared_ptr<Statement> compile(const std::vector<std::string> &query, std::v
             ptr = std::make_shared<ConstOp>(stmt == "true", -1);
         } else if (isBitString(stmt)) {
             config::BitString new_stmt(stmt.size() - 2);
+            if(stmt.size() % 2 == 1){
+                auto ans_back = std::make_shared<SpaceOp>();
+                return ans_back;
+            }
             for (int j = 2; j < stmt.size(); ++j) {
                 new_stmt[j - 2] = stmt[j];
             }
