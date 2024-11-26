@@ -17,7 +17,6 @@ enum class ColumnType {
 
 enum class IndexType { ORDERED, UNORDERED };
 
-
 struct ColumnSchema {
     std::string name;
     ColumnType type;

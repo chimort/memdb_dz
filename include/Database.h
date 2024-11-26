@@ -45,8 +45,6 @@ public:
 
     std::shared_ptr<Table> getTable(const std::string& table_name);
 
-    std::unordered_set<int> record_index(const std::vector<std::vector<std::string>>& PCNF, const std::string& table_name);
-
 private:
     Database() = default;
     ~Database() = default;

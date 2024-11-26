@@ -48,15 +48,14 @@ public:
     bool saveToCSV(std::ofstream& ofs) const;
     bool loadFromCSV(std::istream& is);
 
-    inline std::unordered_map<std::string,
-            std::unordered_multimap<std::size_t, int>> getIndices() const {return indices_; };
-    inline std::unordered_map<std::string, std::multimap<config::ColumnValue, int>> getOrderedIndices() const {return ordered_indices_;};
-    size_t makeHashKey(const config::ColumnValue& value) const;
-
+    std::unordered_set<int> record_index(const std::vector<std::vector<std::string>>& PCNF, bool&);
 private:
-    std::string convertColumnValueToString(const config::ColumnValue& value) const;
 
+
+    std::string convertColumnValueToString(const config::ColumnValue& value) const;
     std::vector<std::string> parseCSVLine(const std::string& line) const;
+
+    size_t makeHashKey(const config::ColumnValue& value) const;
     void indexRow(const int& id, const config::RowType& row);
 
     bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
