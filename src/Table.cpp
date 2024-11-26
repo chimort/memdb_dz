@@ -8,7 +8,9 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <limits>
 #include <algorithm>
+#include <numeric>
 
 namespace memdb
 {
@@ -492,7 +494,6 @@ std::string Table::serializeAttributes(const bool attributes[3]) const
     if (attributes[1]) attr_names.push_back("autoincrement");
     if (attributes[2]) attr_names.push_back("key");
 
-    // Объединяем имена атрибутов через запятую
     std::string result;
     for (size_t i = 0; i < attr_names.size(); ++i) {
         result += attr_names[i];
@@ -505,35 +506,29 @@ std::string Table::serializeAttributes(const bool attributes[3]) const
 }
 
 bool Table::saveToCSV(std::ofstream& ofs) const {
-    // Начинаем строку схемы с специального маркера
     ofs << "#SCHEMA#";
 
     for (size_t i = 0; i < schema_.size(); ++i) {
         const auto& column = schema_[i];
 
-        // Сериализуем имя столбца и тип
         ofs << column.name << ":" << columnTypeToString(column.type);
 
-        // Сериализуем атрибуты, если они есть
         std::string attributes_str = serializeAttributes(column.attributes);
         if (!attributes_str.empty()) {
             ofs << "{" << attributes_str << "}";
         }
 
-        // Сериализуем максимальный размер для строковых типов
         if (column.type == config::ColumnType::STRING) {
             ofs << "[" << column.max_size << "]";
         }
 
-        // Добавляем запятую, если это не последний столбец
         if (i != schema_.size() - 1) {
-            ofs << ",";
+            ofs << ";";
         }
     }
 
     ofs << '\n';
 
-    // Сохраняем имена столбцов как заголовки
     for (size_t i = 0; i < schema_.size(); ++i) {
         ofs << schema_[i].name;
         if (i != schema_.size() - 1) {
@@ -542,7 +537,6 @@ bool Table::saveToCSV(std::ofstream& ofs) const {
     }
     ofs << '\n';
 
-    // Сохраняем данные таблицы
     for (const auto& [id, row] : data_) {
         for (size_t i = 0; i < schema_.size(); ++i) {
             const auto& column_name = schema_[i].name;
@@ -551,7 +545,6 @@ bool Table::saveToCSV(std::ofstream& ofs) const {
                 std::string value_str = convertColumnValueToString(it->second);
                 ofs << value_str;
             } else {
-                // Обработка NULL значений
                 ofs << "NULL";
             }
             if (i != schema_.size() - 1) {
@@ -614,71 +607,69 @@ void Table::parseAttributes(const std::string& attributes_str, bool attributes[3
     }
 }
 
-std::vector<config::ColumnSchema> Table::parseSchemaLine(const std::string& schema_line) 
-{
-    std::vector<config::ColumnSchema> schema;
-    std::stringstream ss(schema_line);
-    std::string column_info;
+void Table::rebuildIndicesAndConstraints() {
+    // Очищаем существующие индексы и структуры
+    indices_.clear();
+    ordered_indices_.clear();
+    autoincrement_counters_.clear();
+    unique_null_value_.clear();
 
-    while (std::getline(ss, column_info, ',')) {
-        size_t colon_pos = column_info.find(':');
-        if (colon_pos == std::string::npos) {
-            continue; // Неверный формат
+    for (const auto& column_schema : schema_) {
+        const std::string& column_name = column_schema.name;
+
+        if (column_schema.attributes[1]) {
+            autoincrement_counters_[column_name] = std::set<int>();
         }
 
-        std::string column_name = column_info.substr(0, colon_pos);
-        std::string type_and_rest = column_info.substr(colon_pos + 1);
-
-        // Инициализируем атрибуты столбца
-        bool attributes[3] = { false, false, false }; // {unique, autoincrement, key}
-        size_t type_end_pos = type_and_rest.find_first_of("{[");
-
-        std::string type_str = (type_end_pos != std::string::npos)
-                                    ? type_and_rest.substr(0, type_end_pos)
-                                    : type_and_rest;
-
-        size_t attr_start = type_and_rest.find('{');
-        size_t attr_end = type_and_rest.find('}');
-
-        if (attr_start != std::string::npos && attr_end != std::string::npos && attr_end > attr_start) {
-            std::string attributes_str = type_and_rest.substr(attr_start + 1, attr_end - attr_start - 1);
-            parseAttributes(attributes_str, attributes);
+        if (column_schema.attributes[0] || column_schema.attributes[2]) { 
+            unique_null_value_[column_name] = false;
         }
 
-        size_t max_size = 0;
-        if (type_and_rest.find('[') != std::string::npos) {
-            // Парсинг max_size для строковых типов
-            size_t bracket_open = type_and_rest.find('[');
-            size_t bracket_close = type_and_rest.find(']');
-            if (bracket_close > bracket_open) {
-                std::string size_str = type_and_rest.substr(bracket_open + 1, bracket_close - bracket_open - 1);
-                max_size = std::stoi(size_str);
-            }
+        if (column_schema.attributes[2]) { 
+            indices_[column_name] = std::unordered_multimap<size_t, int>();
+            has_index_ = true;
         }
-
-        config::ColumnType column_type;
-        if (type_str == "INT") {
-            column_type = config::ColumnType::INT;
-        } else if (type_str == "BOOL") {
-            column_type = config::ColumnType::BOOL;
-        } else if (type_str == "STRING") {
-            column_type = config::ColumnType::STRING;
-        } else {
-            continue; // Неподдерживаемый тип
-        }
-
-        // Создаем ColumnSchema и устанавливаем атрибуты
-        config::ColumnSchema column_schema;
-        column_schema.name = column_name;
-        column_schema.type = column_type;
-        column_schema.max_size = max_size;
-        std::copy(std::begin(attributes), std::end(attributes), std::begin(column_schema.attributes));
-
-        // Добавляем столбец в схему
-        schema.push_back(column_schema);
     }
 
-    return schema;
+    for (const auto& [id, row] : data_) {
+        for (const auto& [column_name, value] : row) {
+            if (autoincrement_counters_.find(column_name) != autoincrement_counters_.end()) {
+                if (std::holds_alternative<int>(value)) {
+                    autoincrement_counters_[column_name].insert(std::get<int>(value));
+                }
+            }
+
+            auto schema_it = std::find_if(schema_.begin(), schema_.end(),
+                [&column_name](const auto& col) { return col.name == column_name; });
+
+            if (schema_it != schema_.end()) {
+                const auto& column_schema = *schema_it;
+                if (column_schema.attributes[2]) { // key
+                    size_t hash_value = makeHashKey(value);
+                    indices_[column_name].emplace(hash_value, id);
+                }
+            }
+
+            if (std::holds_alternative<std::monostate>(value)) {
+                if (schema_it != schema_.end() &&
+                    (schema_it->attributes[0] || schema_it->attributes[2])) {
+                    unique_null_value_[column_name] = true;
+                }
+            }
+        }
+    }
+
+    if (!data_.empty()) {
+        int max_id = std::numeric_limits<int>::min();
+        for (const auto& [id, _] : data_) {
+            if (id > max_id) {
+                max_id = id;
+            }
+        }
+        next_id_ = max_id + 1;
+    } else {
+        next_id_ = 0;
+    }
 }
 
 bool Table::loadFromCSV(std::istream& is)
@@ -748,7 +739,6 @@ bool Table::loadFromCSV(std::istream& is)
     }
 
     if (!data_.empty()) {
-        // Находим максимальный id в существующих записях
         auto max_id_iter = std::max_element(data_.begin(), data_.end(),
             [](const auto& lhs, const auto& rhs) {
                 return lhs.first < rhs.first;
@@ -757,8 +747,74 @@ bool Table::loadFromCSV(std::istream& is)
     } else {
         next_id_ = 0;
     }
-
+    rebuildIndicesAndConstraints();
     return true;
+}
+
+std::vector<config::ColumnSchema> Table::parseSchemaLine(const std::string& schema_line) {
+    std::vector<config::ColumnSchema> schema;
+    std::stringstream ss(schema_line);
+    std::string column_info;
+
+    while (std::getline(ss, column_info, ';')) {
+        column_info.erase(0, column_info.find_first_not_of(" \t"));
+        column_info.erase(column_info.find_last_not_of(" \t") + 1);
+
+        if (column_info.empty()) {
+            continue;
+        }
+
+        size_t colon_pos = column_info.find(':');
+        if (colon_pos == std::string::npos) {
+            std::cerr << "Ошибка: Некорректный формат столбца в схеме: " << column_info << std::endl;
+            return {};
+        }
+
+        std::string column_name = column_info.substr(0, colon_pos);
+        std::string type_and_rest = column_info.substr(colon_pos + 1);
+
+        bool attributes[3] = { false, false, false }; // {unique, autoincrement, key}
+
+        size_t attr_start = type_and_rest.find('{');
+        size_t attr_end = type_and_rest.find('}');
+        std::string type_str = (attr_start != std::string::npos) ? type_and_rest.substr(0, attr_start) : type_and_rest;
+
+        if (attr_start != std::string::npos && attr_end != std::string::npos && attr_end > attr_start) {
+            std::string attributes_str = type_and_rest.substr(attr_start + 1, attr_end - attr_start - 1);
+            parseAttributes(attributes_str, attributes);
+        }
+
+        size_t max_size = 0;
+        size_t bracket_open = type_str.find('[');
+        size_t bracket_close = type_str.find(']');
+        if (bracket_open != std::string::npos && bracket_close != std::string::npos && bracket_close > bracket_open) {
+            std::string size_str = type_str.substr(bracket_open + 1, bracket_close - bracket_open - 1);
+            max_size = static_cast<size_t>(std::stoi(size_str));
+            type_str = type_str.substr(0, bracket_open);
+        }
+
+        config::ColumnType column_type;
+        if (type_str == "INT") {
+            column_type = config::ColumnType::INT;
+        } else if (type_str == "BOOL") {
+            column_type = config::ColumnType::BOOL;
+        } else if (type_str == "STRING") {
+            column_type = config::ColumnType::STRING;
+        } else {
+            std::cerr << "Ошибка: Неизвестный тип столбца '" << type_str << "'." << std::endl;
+            return {};
+        }
+
+        config::ColumnSchema column_schema;
+        column_schema.name = column_name;
+        column_schema.type = column_type;
+        column_schema.max_size = max_size;
+        std::copy(std::begin(attributes), std::end(attributes), std::begin(column_schema.attributes));
+
+        schema.push_back(column_schema);
+    }
+
+    return schema;
 }
 
 std::vector<std::string> Table::parseCSVLine(const std::string& line) const

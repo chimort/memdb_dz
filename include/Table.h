@@ -50,7 +50,7 @@ public:
 
     inline const std::unordered_map<int, config::RowType>& getData() const { return data_; }
     inline const std::vector<config::ColumnSchema>& getSchema() const { return schema_; }
-
+    
     bool saveToCSV(std::ofstream& ofs) const;
     bool loadFromCSV(std::istream& is);
 
@@ -64,7 +64,8 @@ private:
     std::string serializeAttributes(const bool attributes[3]) const;
     std::string columnTypeToString(config::ColumnType type) const;
     std::vector<config::ColumnSchema> parseSchemaLine(const std::string& schema_line);
-    
+    void rebuildIndicesAndConstraints();
+
     size_t makeHashKey(const config::ColumnValue& value) const;
 
     bool convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, config::ColumnValue& out_value);
