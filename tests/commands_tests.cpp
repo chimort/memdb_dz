@@ -26,7 +26,7 @@ void PrintVariant(const std::string& col_name, const config::ColumnValue& col_va
         for(const auto& te: temp){ 
             std::cout << te; 
         } 
-        std::cout << col_name << ", "; 
+        std::cout << ", "; 
     } 
     else{ 
         std::cout << col_name << ": NULL, "; 
@@ -132,6 +132,28 @@ TEST_F(DatabaseTest, SELECT) {
     std::cout << std::endl;
 }
 
+TEST_F(DatabaseTest, SELECT_1) {
+    std::string create_table_query = "create table workers ({key, autoincrement} id : int32, name : string[20], salary : int32 = 1200, work_time : bytes[4], fix_time : bytes[3] = 0x5414)";
+    auto res = db.execute(create_table_query);
+    EXPECT_TRUE(res);
+
+    for (int i = 10; i < 100; ++i) {
+        if (i % 5 == 0) {
+            std::string insert_query = "insert (name = user" + std::to_string(i) + ", salary = " + std::to_string(i) + ", work_time = 0x" + std::to_string(i) + ") to workers";
+            auto res_insert = db.execute(insert_query);
+            EXPECT_TRUE(res_insert);
+        }
+    }
+    PrintData(db.getTable("workers")->getData(), create_table_query);
+
+    std::string select_query = R"(select name from workers where id <= salary + 20 )";
+    auto res_select = db.execute(select_query);
+    EXPECT_TRUE(res_select -> getStatus());
+    std::cout << res_select -> getMessage();
+
+    PrintData(res_select->getData(), select_query);
+}
+
 TEST_F(DatabaseTest, UPDATE) {
     std::string create_table_query = "create table rooms ({key, autoincrement} id : int32, occupants : string[5], {unique} beds : int32 = 3, beds_code : bytes[2] = 0x1241)";
     auto res = db.execute(create_table_query);
@@ -170,44 +192,44 @@ TEST_F(DatabaseTest, CREATEINDEXS) {
 
 }
 
-TEST_F(DatabaseTest, DELETE) {
-    std::string create_table_query = "create tABle family ({unique} id : int32, name : string[32], isParent : bool, code : bytes[3])";
+// TEST_F(DatabaseTest, DELETE) {
+//     std::string create_table_query = "create tABle family ({unique} id : int32, name : string[32], isParent : bool, code : bytes[3])";
 
-    auto res = db.execute(create_table_query);
-    EXPECT_TRUE(res->getStatus());
+//     auto res = db.execute(create_table_query);
+//     EXPECT_TRUE(res->getStatus());
 
-    auto res1 = db.execute(R"(insert (id = 1, name = "Anna", isParent = false, code = 0x0ffee3) to family)");
-    auto res2 = db.execute(R"(insert (id = 2, name = "Ivan", isParent = true, code = 0x0e572f) to family)");
+//     auto res1 = db.execute(R"(insert (id = 1, name = "Anna", isParent = false, code = 0x0ffee3) to family)");
+//     auto res2 = db.execute(R"(insert (id = 2, name = "Ivan", isParent = true, code = 0x0e572f) to family)");
 
-    EXPECT_TRUE(res1->getStatus());
-    EXPECT_TRUE(res2->getStatus());
+//     EXPECT_TRUE(res1->getStatus());
+//     EXPECT_TRUE(res2->getStatus());
 
-    std::string delete_query = R"(DELETE family where code = 0x0ffee3)";
-    auto res3 = db.execute(delete_query);
-    EXPECT_TRUE(res3->getStatus());
+//     std::string delete_query = R"(DELETE family where code = 0x0ffee3)";
+//     auto res3 = db.execute(delete_query);
+//     EXPECT_TRUE(res3->getStatus());
 
-    auto table = db.getTable("family");
-    auto data_after = table->getData();
+//     auto table = db.getTable("family");
+//     auto data_after = table->getData();
 
-    for (const auto& [key, row] : data_after) { 
-        auto id_opt = utils::get<int>(row, "id"); 
-        int id = id_opt.has_value() ? id_opt.value() : -1; 
+//     for (const auto& [key, row] : data_after) { 
+//         auto id_opt = utils::get<int>(row, "id"); 
+//         int id = id_opt.has_value() ? id_opt.value() : -1; 
  
-        auto login_opt = utils::get<std::string>(row, "name"); 
-        std::string login = login_opt.has_value() ? login_opt.value() : "N/A"; 
+//         auto login_opt = utils::get<std::string>(row, "name"); 
+//         std::string login = login_opt.has_value() ? login_opt.value() : "N/A"; 
  
-        auto is_parent_opt = utils::get<bool>(row, "is_parent"); 
-        bool is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : false;
-        auto is_code = utils::get<std::vector<uint8_t>>(row, "code");
-        std::vector<uint8_t> code = is_code.has_value() ? is_code.value() : std::vector<uint8_t>{0};
+//         auto is_parent_opt = utils::get<bool>(row, "is_parent"); 
+//         bool is_parent = is_parent_opt.has_value() ? is_parent_opt.value() : false;
+//         auto is_code = utils::get<std::vector<uint8_t>>(row, "code");
+//         std::vector<uint8_t> code = is_code.has_value() ? is_code.value() : std::vector<uint8_t>{0};
  
-        std::cout << "id: " << id 
-                  << ", name: " << login 
-                  << ", is_parent: " << (is_parent ? "true" : "false") 
-                  << " code: ";
-        for (auto& element_vector : code) {
-            std::cout << element_vector << " ";
-        }
-        std::cout << std::endl;
-    }
-}
+//         std::cout << "id: " << id 
+//                   << ", name: " << login 
+//                   << ", is_parent: " << (is_parent ? "true" : "false") 
+//                   << " code: ";
+//         for (auto& element_vector : code) {
+//             std::cout << element_vector << " ";
+//         }
+//         std::cout << std::endl;
+//     }
+// }

@@ -450,12 +450,12 @@ void Table::insertIndices(const int& id, const config::RowType& row)
     }
 
 
-    for (auto &[name, map] : indices_) {
-        std::cout << "Name: " << name << std::endl;
-        for (auto &[key, value] : map) {
-            std::cout << "Key: " << key << " Value: " << value << std::endl;
-        }
-    }
+    // for (auto &[name, map] : indices_) {
+    //     std::cout << "Name: " << name << std::endl;
+    //     for (auto &[key, value] : map) {
+    //         std::cout << "Key: " << key << " Value: " << value << std::endl;
+    //     }
+    // }
 
     // for (auto &[name, map] : ordered_indices_) {
     //     std::cout << name << " ";
