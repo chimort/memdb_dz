@@ -224,9 +224,6 @@ bool QueryParser::createTableParse() {
 
         // Значение по умолчанию (если есть)
         if ((*it)[5].matched) {
-            if (params.attributes[0] == 1){
-                return false;
-            }
 
             params.default_value = (*it)[5].str();
             // Удаляем кавычки, если значение обрамлено ими

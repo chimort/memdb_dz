@@ -36,7 +36,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
             if (indices_.find(column_name) != indices_.end()) {
-                if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+                if (has_index_ && indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
                     return false;
                 }
             } else {
@@ -49,12 +49,12 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         }
 
         row[column_name] = value;
-
-        if (column_schema.attributes[1]) {
-            int provided_value = std::get<int>(value);
-            if (provided_value >= autoincrement_counters_[column_name]) {
-                autoincrement_counters_[column_name] = provided_value + 1;
+      
+        if (column_schema.attributes[1]) { 
+            if (!std::holds_alternative<int>(value)) {
+                return false;
             }
+            autoincrement_counters_[column_name].insert(std::get<int>(value));
         }
     }
 
@@ -62,13 +62,20 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         const std::string& column_name = column_schema.name;
         if (row.find(column_name) == row.end()) {
             if (column_schema.attributes[1]) { // Если autoincrement
-                row[column_name] = autoincrement_counters_[column_name]++;
+                int min_v = findMinUnusedId(column_name);
+                autoincrement_counters_[column_name].insert(min_v);
+                row[column_name] = min_v;
             } else if (!column_schema.default_value.empty()) {
                 config::ColumnValue default_value;
                 if (!convertValue(column_schema.default_value, column_schema, default_value)) {
                     return false;
                 }
-                row[column_name] = default_value;
+                
+                if (column_schema.attributes[0]) {
+                    row[column_name] = std::monostate{};
+                } else {
+                    row[column_name] = default_value;
+                }
             } else {
                 if (column_schema.attributes[0] || column_schema.attributes[2]) {
                     if (unique_null_value_[column_name]) {
@@ -86,8 +93,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     id = next_id_++;
     data_[id] = row;
 
-
-    if (!indices_.empty() || !ordered_indices_.empty()){
+    if (has_index_) {
         insertIndices(id, row);
     }
 
@@ -116,7 +122,7 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
             if (indices_.find(column_name) != indices_.end()) {
-                if (indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
+                if (has_index_ && indices_[column_name].find(makeHashKey(value)) != indices_[column_name].end()) {
                     return false;
                 }
             } else {
@@ -130,25 +136,33 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
         row[column_name] = value;
 
-        if (column_schema.attributes[1]) {
-            int provided_value = std::get<int>(value);
-            if (provided_value >= autoincrement_counters_[column_name]) {
-                autoincrement_counters_[column_name] = provided_value + 1;
+        if (column_schema.attributes[1]) { 
+            if (!std::holds_alternative<int>(value)) {
+                return false;
             }
+            autoincrement_counters_[column_name].insert(std::get<int>(value));
         }
     }
 
     for (size_t i = 0; i < num_columns - num_values; ++i) {
         const config::ColumnSchema& column_schema = schema_[i];
         const std::string& column_name = column_schema.name;
-        if (column_schema.attributes[1]) { // Если autoincrement
-                row[column_name] = autoincrement_counters_[column_name]++;
+        if (column_schema.attributes[1]) { // Если autoincrement    
+            int min_v = findMinUnusedId(column_name);
+            autoincrement_counters_[column_name].insert(min_v);
+            row[column_name] = min_v;
         } else if (!column_schema.default_value.empty()) {
             config::ColumnValue default_value;
             if (!convertValue(column_schema.default_value, column_schema, default_value)) {
                 return false;
             }
-            row[column_name] = default_value;
+
+            if (column_schema.attributes[0]) {
+                row[column_name] = std::monostate{};
+            } else {
+                row[column_name] = default_value;
+            }
+
         } else {
             if (column_schema.attributes[0] || column_schema.attributes[2]) {
                 if (unique_null_value_[column_name]) {
@@ -162,8 +176,8 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
     int id;
     id = next_id_++;
-
-    if (!indices_.empty() || !ordered_indices_.empty()) {
+  
+    if (has_index_) {
         insertIndices(id, row);
     }
     data_[id] = row;
@@ -192,7 +206,22 @@ bool Table::deleteRow(const int& row_id)
     if (it != data_.end()) {
         removeFromIndices(row_id);
         data_.erase(it);
+        config::RowType& row = it->second;
 
+        for (const auto &column : schema_) {
+            const std::string& column_name = column.name;
+            if (column.attributes[1]) {
+                unique_null_value_[column_name] = false;
+                auto value_it = row.find(column_name);
+                if (value_it != row.end()) {
+                    const config::ColumnValue& value = value_it->second;
+                    if (std::holds_alternative<int>(value)) {
+                        int int_value = std::get<int>(value);
+                        autoincrement_counters_[column_name].erase(int_value);
+                    }
+                }
+            }
+        }
         return true;
     }
     return false;
@@ -343,6 +372,19 @@ bool Table::convertValue(const std::string& value_str, const config::ColumnSchem
     }
 }
 
+int Table::findMinUnusedId(const std::string& column_name)
+{
+    int number = 0;
+    for (int i : autoincrement_counters_[column_name]) {
+        if (number == i) {
+            number++;
+        } else if (number < i) {
+            break;
+        }
+    }
+    return number;
+}
+
 bool Table::createIndex(const std::vector<std::string>& columns_name, config::IndexType index_type) {
     for (const auto& column_name : columns_name) {
         bool found = false;
@@ -384,6 +426,7 @@ bool Table::createIndex(const std::vector<std::string>& columns_name, config::In
             }
         }
     }
+    has_index_ = true;
     return true;
 }
 
