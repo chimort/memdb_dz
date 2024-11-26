@@ -10,10 +10,10 @@
 #include <iomanip>
 #include <algorithm>
 
-namespace memdb 
+namespace memdb
 {
 
-bool Table::insertRecord(const std::unordered_map<std::string, std::string>& insert_values) 
+bool Table::insertRecord(const std::unordered_map<std::string, std::string>& insert_values)
 {
     if (insert_values.empty()) {
         return false;
@@ -25,13 +25,13 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         auto schema_it = std::find_if(schema_.begin(), schema_.end(),
             [&column_name](const auto& col) { return col.name == column_name; });
         if (schema_it == schema_.end()) {
-            return false; 
+            return false;
         }
         const config::ColumnSchema& column_schema = *schema_it;
 
         config::ColumnValue value;
         if (!convertValue(value_str, column_schema, value)) {
-            return false; 
+            return false;
         }
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
@@ -49,7 +49,7 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
         }
 
         row[column_name] = value;
-
+      
         if (column_schema.attributes[1]) { 
             if (!std::holds_alternative<int>(value)) {
                 return false;
@@ -96,11 +96,11 @@ bool Table::insertRecord(const std::unordered_map<std::string, std::string>& ins
     if (has_index_) {
         insertIndices(id, row);
     }
-    
+
     return true;
 }
 
-bool Table::insertRecord(const std::vector<std::string>& insert_values) 
+bool Table::insertRecord(const std::vector<std::string>& insert_values)
 {
     if (insert_values.empty() || insert_values.size() > schema_.size()) {
         return false;
@@ -117,7 +117,7 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
         config::ColumnValue value;
 
         if (!convertValue(insert_values[i], column_schema, value)) {
-            return false; 
+            return false;
         }
 
         if (column_schema.attributes[0] || column_schema.attributes[2]) {
@@ -176,7 +176,7 @@ bool Table::insertRecord(const std::vector<std::string>& insert_values)
 
     int id;
     id = next_id_++;
-    
+  
     if (has_index_) {
         insertIndices(id, row);
     }
@@ -233,7 +233,7 @@ void Table::removeFromIndices(const int& row_id)
         const std::string &column_name = column_schema.name;
         const auto &value = data_[row_id][column_name];
 
-        if (column_schema.ordering == config::IndexType::UNORDERED) {
+        if (column_schema.ordering.unordered) {
             size_t hash_value = makeHashKey(value);
             auto &index = indices_[column_name];
             auto range = index.equal_range(hash_value);
@@ -246,7 +246,7 @@ void Table::removeFromIndices(const int& row_id)
             }
         }
 
-        if (column_schema.ordering == config::IndexType::ORDERED) {
+        if (column_schema.ordering.ordered) {
             auto &ordered_index = ordered_indices_[column_name];
             auto range = ordered_index.equal_range(value);
             for (auto iter = range.first; iter != range.second;) {
@@ -268,7 +268,7 @@ void Table::updateIndices(const int& row_id, const config::RowType& new_row)
             continue;
         }
         const auto &value = data_[row_id][column_name];
-        if (column_schema.ordering == config::IndexType::UNORDERED) {
+        if (column_schema.ordering.unordered) {
             size_t hash_value = makeHashKey(value);
             auto &index = indices_[column_name];
             auto range = index.equal_range(hash_value);
@@ -283,7 +283,7 @@ void Table::updateIndices(const int& row_id, const config::RowType& new_row)
             }
         }
 
-        if (column_schema.ordering == config::IndexType::ORDERED) {
+        if (column_schema.ordering.ordered) {
             auto &ordered_index = ordered_indices_[column_name];
             auto range = ordered_index.equal_range(value);
             for (auto iter = range.first; iter != range.second;) {
@@ -299,8 +299,8 @@ void Table::updateIndices(const int& row_id, const config::RowType& new_row)
     }
 }
 
-bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema, 
-    config::ColumnValue& out_value) 
+bool Table::convertValue(const std::string& value_str, const config::ColumnSchema& column_schema,
+    config::ColumnValue& out_value)
 {
     switch (column_schema.type) {
         case config::ColumnType::INT: {
@@ -399,7 +399,7 @@ bool Table::createIndex(const std::vector<std::string>& columns_name, config::In
             return false;
         }
 
-        if (index_type == config::IndexType::UNORDERED) {
+        if (index_type.unordered) {
             if (indices_.find(column_name) == indices_.end()) {
                 std::unordered_multimap<std::size_t, int> index;
                 indices_[column_name] = index;
@@ -412,7 +412,7 @@ bool Table::createIndex(const std::vector<std::string>& columns_name, config::In
                     }
                 }
             }
-        } else if (index_type == config::IndexType::ORDERED) {
+        } else if (index_type.ordered) {
             if (ordered_indices_.find(column_name) == ordered_indices_.end()) {
                 std::multimap<config::ColumnValue, int> index;
                 ordered_indices_[column_name] = index;
@@ -437,17 +437,41 @@ void Table::insertIndices(const int& id, const config::RowType& row)
         auto it = row.find(column_name);
         if (it != row.end()) {
             const auto& value = it->second;
-            
-            if (column_schema.ordering == config::IndexType::UNORDERED) {
+
+            if (column_schema.ordering.unordered) {
                 size_t hash_value = makeHashKey(value);
                 indices_[column_name].emplace(hash_value, id);
             }
-            
-            if (column_schema.ordering == config::IndexType::ORDERED) {
+
+            if (column_schema.ordering.ordered) {
                 ordered_indices_[column_name].emplace(value, id);
             }
         }
     }
+
+
+    for (auto &[name, map] : indices_) {
+        std::cout << "Name: " << name << std::endl;
+        for (auto &[key, value] : map) {
+            std::cout << "Key: " << key << " Value: " << value << std::endl;
+        }
+    }
+
+    // for (auto &[name, map] : ordered_indices_) {
+    //     std::cout << name << " ";
+    //     for (auto &[key, value] : map) {
+    //         auto *pointer
+    //         switch (std::get_if(key))
+    //         {
+    //         case /* constant-expression */:
+    //             /* code */
+    //             break;
+            
+    //         default:
+    //             break;
+    //         }
+    //     }
+    // }    
 }
 
 size_t Table::makeHashKey(const config::ColumnValue& value) const {
@@ -469,7 +493,7 @@ size_t Table::makeHashKey(const config::ColumnValue& value) const {
 bool Table::saveToCSV(std::ofstream& ofs) const
 {
     for (size_t i = 0; i < schema_.size(); ++i) {
-        ofs << schema_[i].name; 
+        ofs << schema_[i].name;
         if (i != schema_.size() - 1)
             ofs << ',';
     }
@@ -484,7 +508,7 @@ bool Table::saveToCSV(std::ofstream& ofs) const
     for (const int& id : ids) {
         const auto& row = data_.at(id);
         for (size_t i = 0; i < schema_.size(); ++i) {
-            const auto& column_name = schema_[i].name; 
+            const auto& column_name = schema_[i].name;
             auto it = row.find(column_name);
             if (it != row.end()) {
                 const std::string value_str = convertColumnValueToString(it->second);
@@ -619,6 +643,141 @@ std::vector<std::string> Table::parseCSVLine(const std::string& line) const
     }
 
     return fields;
+}
+
+std::unordered_set<int> intersect(const std::vector<std::vector<int>>& vectors) {
+    if (vectors.empty()) return {};
+
+    std::unordered_set<int> result(vectors[0].begin(), vectors[0].end());
+
+    for (size_t i = 1; i < vectors.size(); ++i) {
+        std::unordered_set<int> temp;
+        for (const auto &elem: vectors[i]) {
+            if (result.count(elem)) {
+                temp.insert(elem);
+            }
+        }
+        result = std::move(temp);
+    }
+    return result;
+}
+
+    bool isNum(const std::string& str){
+        if(str[0] != '+' && str[0] != '-' && (str[0]-'0' < 0 || str[0] - '9' > 0)){
+            return false;
+        }
+        for(int i = 1; i < str.size(); ++i){
+            if(str[i]-'0' < 0 || str[i] - '9' > 0){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool isBool(const std::string& str){
+        if(str == "true" || str == "false"){
+            return true;
+        }
+        return false;
+    }
+
+    bool isStr(const std::string& str){
+        if(str.size() > 1){
+            if(str.front() == '\"' && str.back() == '\"'){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool isBitString(std::string str){
+        if(str.size() > 1){
+            if(str.front() == '0' && std::tolower(str[1]) == 'x'){
+                if(str.size() % 2 == 1){
+                    std::cout << "error of byteString";
+                }
+                for(int i = 2 ; i < str.size(); ++i){
+                    if(!((str[i] - '0' >= 0 || str[i] - '9' <= 0) || (std::tolower(str[i]) - 'a' < 0 || std::tolower(str[i]) - 'f' > 0))){
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+std::unordered_set<int> Table::record_index(const std::vector<std::vector<std::string>>& PCNF, bool& is_index) {
+    std::vector<std::vector<int>> ans;
+    if (PCNF.empty()) {
+        is_index = false;
+        return intersect(ans);
+    }
+    for (const auto &item: PCNF) {
+        config::ColumnValue col_value;
+        std::string col_name;
+        bool is_first = true;
+        for (int i = 0; i < 2; ++i) {
+            std::string str = item[i];
+            if (isNum(str)) {
+                col_value = atoi(str.c_str());
+            } else if (isStr(str)) {
+                col_value = str.substr(1, str.size() - 2);
+            } else if (isBool(str)) {
+                col_value = bool(str == "true");
+            } else if (isBitString(str)) {
+                config::BitString new_stmt(str.size() - 2);
+                for (int j = 2; j < str.size(); ++j) {
+                    new_stmt[j - 2] = str[j];
+                }
+                col_value = new_stmt;
+            } else {
+                if (i == 1) {
+                    is_first = false;
+                }
+                col_name = str;
+            }
+        }
+
+        std::vector<int> num;
+        if (item[2] == "=") {
+            if(!indices_.contains(col_name)){
+                continue;
+            }
+            auto [start_id, end_id] = indices_[col_name].equal_range(makeHashKey(col_value));
+            if (start_id == end_id){
+                continue;
+            }
+            for (; start_id != end_id; ++start_id) {
+                num.push_back(start_id->second);
+            }
+        } else {
+            if(!ordered_indices_.contains(col_name)){
+                continue;
+            }
+            auto lower = ordered_indices_[col_name].begin();
+            auto upper = ordered_indices_[col_name].end();
+            if(lower == upper){
+                continue;
+            }
+            if ( (item[2] == "<=" && is_first) || (item[2] == ">=" && !is_first) ) {
+                upper = ordered_indices_[col_name].upper_bound(col_value);
+            } else if ( (item[2] == "<=" && !is_first) || (item[2] == ">=" && is_first) ) {
+                lower = ordered_indices_[col_name].lower_bound(col_value);
+            } else if ( (item[2] == "<" && is_first) || (item[2] == ">" && !is_first) ){
+                upper = ordered_indices_[col_name].lower_bound(col_value);
+            } else if ( (item[2] == "<" && !is_first) || (item[2] == ">" && is_first) ) {
+                lower = ordered_indices_[col_name].upper_bound(col_value);
+            }
+            for (; lower != upper; ++lower) {
+                num.push_back(lower->second);
+            }
+        }
+        ans.push_back(num);
+    }
+    is_index = !ans.empty();
+
+    return intersect(ans);
 }
 
 }

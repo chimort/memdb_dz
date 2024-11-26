@@ -15,8 +15,11 @@ enum class ColumnType {
     BITSTRING
 };
 
-enum class IndexType { ORDERED, UNORDERED };
-
+class IndexType {
+public:
+    bool unordered = false;
+    bool ordered = false;
+};
 
 struct ColumnSchema {
     std::string name;

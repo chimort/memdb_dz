@@ -170,23 +170,22 @@ TEST(QueryParserTest, CreateParseTest) {
     std::cout << std::endl;
     std::cout << "Expected values:" << std::endl;
     std::unordered_map<std::string, config::IndexType> column_index_type_ = {
-        {"login", {config::IndexType::ORDERED}},
+        {"login", {config::IndexType{false, true}}},
 
-        {"id", {config::IndexType::ORDERED}},
+        {"id", {config::IndexType{false, true}}},
 
-        {"admin", {config::IndexType::ORDERED}}
+        {"admin", {config::IndexType{false, true}}}
     };
     
     for (const auto& [key, value] : column_index_type_){
         std::cout << "Column: " << key << " Type: ";
-        switch (value) {
-        case config::IndexType::ORDERED:
+        if (value.ordered == true) {
+            config::IndexType{false, true};
             std::cout << "ordered" << std::endl;
-            break;
-        case config::IndexType::UNORDERED:
+        } else if (value.unordered) {
+            config::IndexType{true, false};
             std::cout << "unordered" << std::endl;
-            break;
-        default:
+        } else {
             std::cout << "unknown" << std::endl;
             break;
         }
