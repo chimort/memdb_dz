@@ -26,7 +26,7 @@ void PrintVariant(const std::string& col_name, const config::ColumnValue& col_va
         for(const auto& te: temp){ 
             std::cout << te; 
         } 
-        std::cout << col_name << ", "; 
+        std::cout << ", ";
     } 
     else{ 
         std::cout << col_name << ": NULL, "; 
@@ -168,7 +168,7 @@ TEST_F(DatabaseTest, CREATEINDEXS) {
     EXPECT_TRUE(res1 -> getStatus());
 
 }
-/*
+
 TEST_F(DatabaseTest, DELETE) {
     std::string create_table_query = "create tABle family ({unique} id : int32, name : string[32], isParent : bool, code : bytes[3])";
 
@@ -209,4 +209,4 @@ TEST_F(DatabaseTest, DELETE) {
         }
         std::cout << std::endl;
     }
-}*/
+}

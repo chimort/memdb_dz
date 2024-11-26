@@ -188,7 +188,7 @@ public:
         if (std::holds_alternative<int>(a) && std::holds_alternative<int>(b)) {
             in.pop_back();
             in.pop_back();
-            if (std::get<int>(b) != 0) {
+            if (std::get<int>(a) != 0) {
                 in.emplace_back(std::get<int>(b) % std::get<int>(a));
             } else {
                 in.emplace_back(std::monostate());
