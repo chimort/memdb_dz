@@ -118,8 +118,6 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                         insert2[std::stoi(pair.first)] = pair.second;
                     }
                 }
-
-                
                 success = table->insertRecord(insert2);
             } else {
                 success = table->insertRecord(insert_values);
@@ -311,7 +309,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             bool is_index = true;
             auto recordIndex = getTable(table_name)->Table::record_index(PCNF, is_index);
             std::vector<config::ColumnValue> statement(1, true);
-            is_index = false;
+            //is_index = false;
 
             for( auto new_s : column_name){
                 for ( auto old_s : schema){

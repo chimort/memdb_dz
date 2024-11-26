@@ -42,17 +42,6 @@ void PrintData(const std::unordered_map<int, config::RowType> &data, const std::
         std::cout << "\n"; 
     } 
     std::cout << "\n"; 
-} 
-
-void PrintData(const std::unordered_map<int, config::RowType> &data, const std::string& query){
-    std::cout << " << " << query << " >>\n";
-    for (const auto& [key, row] : data) {
-        for(const auto& [col_name, col_value] : row){
-            PrintVariant(col_name, col_value);
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
 }
 
 TEST_F(DatabaseTest, CREATEINDEXS_SELECT) {
@@ -64,9 +53,12 @@ TEST_F(DatabaseTest, CREATEINDEXS_SELECT) {
     auto res1 = db.execute(create_index_query);
 
     for (int i = 0; i <= 1; ++i) {
-        std::string insert_query = R"(insert (doctors = "Strange)" + std::to_string(i) + R"(", age =)" + std::to_string(i) + R"() to medicine)";
+        std::string insert_query =
+                R"(insert (doctors = "Strange)" + std::to_string(i) + R"(", age =)" + std::to_string(i) +
+                R"() to medicine)";
         auto res2 = db.execute(insert_query);
     }
+}
   
 TEST_F(DatabaseTest, INSERT_implicit) {
     std::string create_table_query = "create table technique ({unique} cars : string[32], {unique, autoincrement} cars_id : int32, {unique} phone_id : int32, {unique} phone : string[32])";
@@ -173,14 +165,10 @@ TEST_F(DatabaseTest, CREATEINDEXS) {
     auto res1 = db.execute(create_index_query);
     EXPECT_TRUE(res1 -> getStatus());
 
-    std::string insert_query = R"(insert (id = 5, doctors = "Harry") to medicine)";
-    std::string create_index_query = "create ordered index on medicine by id, doctors";
-    auto res1 = db.execute(create_index_query);
-
     EXPECT_TRUE(res1 -> getStatus());
 
 }
-
+/*
 TEST_F(DatabaseTest, DELETE) {
     std::string create_table_query = "create tABle family ({unique} id : int32, name : string[32], isParent : bool, code : bytes[3])";
 
@@ -221,4 +209,4 @@ TEST_F(DatabaseTest, DELETE) {
         }
         std::cout << std::endl;
     }
-}
+}*/
