@@ -29,7 +29,7 @@ public:
             }
             if (column.attributes[2]) {
                 indices_[column.name] = {};
-                column.ordering = config::IndexType::UNORDERED;
+                column.ordering.unordered;
                 has_index_ = true;
             }
         }

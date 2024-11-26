@@ -42,17 +42,6 @@ void PrintData(const std::unordered_map<int, config::RowType> &data, const std::
         std::cout << "\n"; 
     } 
     std::cout << "\n"; 
-} 
-
-void PrintData(const std::unordered_map<int, config::RowType> &data, const std::string& query){
-    std::cout << " << " << query << " >>\n";
-    for (const auto& [key, row] : data) {
-        for(const auto& [col_name, col_value] : row){
-            PrintVariant(col_name, col_value);
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
 }
 
 TEST_F(DatabaseTest, CREATEINDEXS_SELECT) {
@@ -67,7 +56,7 @@ TEST_F(DatabaseTest, CREATEINDEXS_SELECT) {
         std::string insert_query = R"(insert (doctors = "Strange)" + std::to_string(i) + R"(", age =)" + std::to_string(i) + R"() to medicine)";
         auto res2 = db.execute(insert_query);
     }
-  
+}
 TEST_F(DatabaseTest, INSERT_implicit) {
     std::string create_table_query = "create table technique ({unique} cars : string[32], {unique, autoincrement} cars_id : int32, {unique} phone_id : int32, {unique} phone : string[32])";
     auto res = db.execute(create_table_query);
@@ -174,8 +163,8 @@ TEST_F(DatabaseTest, CREATEINDEXS) {
     EXPECT_TRUE(res1 -> getStatus());
 
     std::string insert_query = R"(insert (id = 5, doctors = "Harry") to medicine)";
-    std::string create_index_query = "create ordered index on medicine by id, doctors";
-    auto res1 = db.execute(create_index_query);
+    create_index_query = "create ordered index on medicine by id, doctors";
+    res1 = db.execute(create_index_query);
 
     EXPECT_TRUE(res1 -> getStatus());
 
