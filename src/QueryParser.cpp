@@ -130,9 +130,9 @@ bool QueryParser::createIndexParse() {
     // Определяем тип индекса
     config::IndexType index_type;
     if (index_type_str == "ordered") {
-        index_type = config::IndexType::ORDERED;
+        index_type.ordered = true;
     } else if (index_type_str == "unordered") {
-        index_type = config::IndexType::UNORDERED;
+        index_type.unordered = true;
     } else {
         throw std::invalid_argument("Invalid index type");
     }

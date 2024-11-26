@@ -204,7 +204,7 @@ void Table::removeFromIndices(const int& row_id)
         const std::string &column_name = column_schema.name;
         const auto &value = data_[row_id][column_name];
 
-        if (column_schema.ordering == config::IndexType::UNORDERED) {
+        if (column_schema.ordering.unordered) {
             size_t hash_value = makeHashKey(value);
             auto &index = indices_[column_name];
             auto range = index.equal_range(hash_value);
@@ -217,7 +217,7 @@ void Table::removeFromIndices(const int& row_id)
             }
         }
 
-        if (column_schema.ordering == config::IndexType::ORDERED) {
+        if (column_schema.ordering.ordered) {
             auto &ordered_index = ordered_indices_[column_name];
             auto range = ordered_index.equal_range(value);
             for (auto iter = range.first; iter != range.second;) {
@@ -239,7 +239,7 @@ void Table::updateIndices(const int& row_id, const config::RowType& new_row)
             continue;
         }
         const auto &value = data_[row_id][column_name];
-        if (column_schema.ordering == config::IndexType::UNORDERED) {
+        if (column_schema.ordering.unordered) {
             size_t hash_value = makeHashKey(value);
             auto &index = indices_[column_name];
             auto range = index.equal_range(hash_value);
@@ -254,7 +254,7 @@ void Table::updateIndices(const int& row_id, const config::RowType& new_row)
             }
         }
 
-        if (column_schema.ordering == config::IndexType::ORDERED) {
+        if (column_schema.ordering.ordered) {
             auto &ordered_index = ordered_indices_[column_name];
             auto range = ordered_index.equal_range(value);
             for (auto iter = range.first; iter != range.second;) {
@@ -357,7 +357,7 @@ bool Table::createIndex(const std::vector<std::string>& columns_name, config::In
             return false;
         }
 
-        if (index_type == config::IndexType::UNORDERED) {
+        if (index_type.unordered) {
             if (indices_.find(column_name) == indices_.end()) {
                 std::unordered_multimap<std::size_t, int> index;
                 indices_[column_name] = index;
@@ -370,7 +370,7 @@ bool Table::createIndex(const std::vector<std::string>& columns_name, config::In
                     }
                 }
             }
-        } else if (index_type == config::IndexType::ORDERED) {
+        } else if (index_type.ordered) {
             if (ordered_indices_.find(column_name) == ordered_indices_.end()) {
                 std::multimap<config::ColumnValue, int> index;
                 ordered_indices_[column_name] = index;
@@ -395,12 +395,12 @@ void Table::insertIndices(const int& id, const config::RowType& row)
         if (it != row.end()) {
             const auto& value = it->second;
 
-            if (column_schema.ordering == config::IndexType::UNORDERED) {
+            if (column_schema.ordering.unordered) {
                 size_t hash_value = makeHashKey(value);
                 indices_[column_name].emplace(hash_value, id);
             }
 
-            if (column_schema.ordering == config::IndexType::ORDERED) {
+            if (column_schema.ordering.ordered) {
                 ordered_indices_[column_name].emplace(value, id);
             }
         }
