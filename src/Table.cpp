@@ -675,12 +675,18 @@ std::unordered_set<int> Table::record_index(const std::vector<std::vector<std::s
         std::vector<int> num;
         if (item[2] == "=") {
             auto [start_id, end_id] = indices_[col_name].equal_range(makeHashKey(col_value));
+            if (start_id == end_id){
+                continue;
+            }
             for (; start_id != end_id; ++start_id) {
                 num.push_back(start_id->second);
             }
         } else {
             auto lower = ordered_indices_[col_name].begin();
             auto upper = ordered_indices_[col_name].end();
+            if(lower == upper){
+                continue;
+            }
             if ( (item[2] == "<=" && is_first) || (item[2] == ">=" && !is_first) ) {
                 upper = ordered_indices_[col_name].upper_bound(col_value);
             } else if ( (item[2] == "<=" && !is_first) || (item[2] == ">=" && is_first) ) {
@@ -696,6 +702,8 @@ std::unordered_set<int> Table::record_index(const std::vector<std::vector<std::s
         }
         ans.push_back(num);
     }
+    is_index = !ans.empty();
+
     return intersect(ans);
 }
 
