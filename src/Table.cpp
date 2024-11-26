@@ -698,6 +698,9 @@ std::unordered_set<int> Table::record_index(const std::vector<std::vector<std::s
 
         std::vector<int> num;
         if (item[2] == "=") {
+            if(!indices_.contains(col_name)){
+                continue;
+            }
             auto [start_id, end_id] = indices_[col_name].equal_range(makeHashKey(col_value));
             if (start_id == end_id){
                 continue;
@@ -706,6 +709,9 @@ std::unordered_set<int> Table::record_index(const std::vector<std::vector<std::s
                 num.push_back(start_id->second);
             }
         } else {
+            if(!ordered_indices_.contains(col_name)){
+                continue;
+            }
             auto lower = ordered_indices_[col_name].begin();
             auto upper = ordered_indices_[col_name].end();
             if(lower == upper){
