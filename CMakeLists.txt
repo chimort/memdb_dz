@@ -21,11 +21,11 @@ target_link_libraries(memdb_project memdb_lib)
 add_subdirectory(googletest)
 
 set(TEST_FILES
-    #tests/parser_tests.cpp
-    #tests/table_tests.cpp
-    #tests/files_tests.cpp
+    tests/parser_tests.cpp
+    tests/table_tests.cpp
+    tests/files_tests.cpp
     tests/commands_tests.cpp
-   # tests/myTEST.cpp
+    tests/myTEST.cpp
 )
 
 add_executable(tests ${TEST_FILES})
