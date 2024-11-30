@@ -143,38 +143,105 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                 response->setMessage("Failed load table in db");  
             } else {
                 response->setStatus(true);
-                response->setMessage("Table created successfully");                 
+                response->setMessage("Table created successfully");
             }
-            
+
             break;
         } case parser::CommandType::DELETE : {
             auto table_name_opt = parser.getTableName();
-            
+            auto condition = parser.getCondition();
+
+            //correct (,),|
+            if(!isValidBracket(condition)) {
+                response->setStatus(false);
+                response->setMessage("incorrect (,),| sequence");
+                break;
+            }
+
+            //correct table_name
             const std::string table_name = table_name_opt;
             auto table_it = tables_.find(table_name);
             if (table_it == tables_.end()) {
                 response->setStatus(false);
-                response->setMessage("Table not found for delete");
-                return response;
-            } 
+                response->setMessage("Table not found for select");
+                break;
+            }
 
-            auto condition = parser.getCondition();
             std::vector<std::string> column_name;
             std::vector<std::vector<std::string>> PCNF;
-            auto expression = parse_where(condition, column_name, PCNF);
+            auto Expression = parse_where(condition, column_name, PCNF);
 
-            std::set<int> ids; // id для удаления
+            //correct result of condition
+            if(std::dynamic_pointer_cast<SpaceOp>(Expression)){
+                response -> setStatus(false);
+                response -> setMessage("wrong condition");
+                break;
+            }
 
-            std::vector<config::ColumnValue> statement(column_name.size());
-            for (auto row : table_it->second->getData()) {
-                for (int i = 0; i < column_name.size(); ++i) {
-                    statement[i] = row.second[column_name[i]];
+            const auto& schema = table_it->second->getSchema();
+            std::vector<std::string> condition_name;
+            for( auto new_s : column_name){
+                for ( auto old_s : schema){
+                    if(old_s.name == new_s){
+                        condition_name.push_back(new_s);
+                    }
                 }
-                auto ans = expression->apply(statement);
-                if (std::holds_alternative<std::monostate>(ans[column_name.size()])) {
-                    ids.insert(row.first);
-                } else if (std::get<bool>(ans[column_name.size()])) {
-                    ids.insert(row.first);
+            }
+
+            //correct name of columns condition
+            if(condition_name.size() != column_name.size()){
+                response ->setStatus(false);
+                response ->setMessage("incorrect column names select in condition");
+                break;
+            }
+
+            //correct of type in condition;
+            bool is_index = true;
+            auto recordIndex = getTable(table_name)->Table::record_index(PCNF, is_index);
+            std::vector<config::ColumnValue> statement(1, true);
+
+            for( auto new_s : column_name){
+                for ( auto old_s : schema){
+                    if(old_s.name == new_s){
+                        if(old_s.type == config::ColumnType::INT){
+                            statement.push_back(300405);
+                        }else if(old_s.type == config::ColumnType::STRING){
+                            statement.push_back("");
+                        }else if(old_s.type == config::ColumnType::BOOL){
+                            statement.push_back(false);
+                        }else{
+                            statement.push_back({});
+                        }
+                    }
+                }
+            }
+            auto check_ans = Expression->apply(statement);
+            if(!std::get<bool>(check_ans[0])){
+                response->setStatus(false);
+                response->setMessage("error of type");
+                break;
+            }
+
+            statement.assign(column_name.size()+1, 0);
+            std::unordered_set<int> ids;
+            for( auto row : table_it->second->getData()){
+                statement.assign(column_name.size()+1, 0);
+                if(is_index && recordIndex.find(row.first) == recordIndex.end()){
+                    continue;
+                }
+                for(int i = 1; i < column_name.size()+1; ++i) {
+                    statement[i] = row.second[column_name[i-1]];
+                }
+                auto ans = Expression ->apply(statement);
+                if(std::holds_alternative<bool>(ans[column_name.size()+1])) {
+                    if (std::get<bool>(ans[column_name.size() + 1])) {
+                        ids.insert(row.first);
+                    }
+                }else if(std::holds_alternative<std::monostate>(ans[column_name.size()+1])){
+                }else{
+                    response -> setStatus(false);
+                    response -> setMessage("condition cannot be reduced to a boolean type");
+                    break;
                 }
             }
             for (const int id : ids) {
@@ -184,7 +251,6 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                     return response;
                 }
             }
-
             response->setStatus(true);
             break;
         } case parser::CommandType::CREATE_INDEX: {
@@ -313,7 +379,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                 for ( auto old_s : schema){
                     if(old_s.name == new_s){
                         if(old_s.type == config::ColumnType::INT){
-                            statement.push_back(0);
+                            statement.push_back(300405);
                         }else if(old_s.type == config::ColumnType::STRING){
                             statement.push_back("");
                         }else if(old_s.type == config::ColumnType::BOOL){
@@ -334,6 +400,7 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
             Table new_Table(new_schema);
             statement.assign(column_name.size()+1, 0);
             for( auto row : table_it->second->getData()){
+                statement.assign(column_name.size()+1, 0);
                 if(is_index && recordIndex.find(row.first) == recordIndex.end()){
                     continue;
                 }
@@ -341,18 +408,19 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
                     statement[i] = row.second[column_name[i-1]];
                 }
                 auto ans = Expression ->apply(statement);
-                if(std::holds_alternative<std::monostate>(ans[column_name.size()+1])){
-                    config::RowType new_row;
-                    for(auto name: new_schema){
-                        new_row[name.name] = row.second[name.name];
+                if(std::holds_alternative<bool>(ans[column_name.size()+1])) {
+                    if (std::get<bool>(ans[column_name.size() + 1])) {
+                        config::RowType new_row;
+                        for (auto name: new_schema) {
+                            new_row[name.name] = row.second[name.name];
+                        }
+                        new_Table.insertRowType(new_row);
                     }
-                    new_Table.insertRowType(new_row);
-                }else if(std::get<bool>(ans[column_name.size()+1])){
-                    config::RowType new_row;
-                    for(auto name: new_schema){
-                        new_row[name.name] = row.second[name.name];
-                    }
-                    new_Table.insertRowType(new_row);
+                }else if(std::holds_alternative<std::monostate>(ans[column_name.size()+1])){
+                }else{
+                    response -> setStatus(false);
+                    response -> setMessage("condition cannot be reduced to a boolean type");
+                    break;
                 }
             }
             response->setStatus(true);
@@ -363,57 +431,150 @@ std::unique_ptr<Response> Database::execute(const std::string_view &str)
         case parser::CommandType::UPDATE: {
             auto table_name_opt = parser.getTableName();
             const auto& assignment = parser.getUpdateValues();
+            auto condition = parser.getCondition();
 
+            //correct (,),|
+            if(!isValidBracket(condition)) {
+                response->setStatus(false);
+                response->setMessage("incorrect (,),| sequence");
+                break;
+            }
+
+            //correct table_name
             const std::string table_name = table_name_opt;
-
             auto table_it = tables_.find(table_name);
             if (table_it == tables_.end()) {
                 response->setStatus(false);
                 response->setMessage("Table not found for select");
-                return response;
+                break;
             }
 
-            auto condition = parser.getCondition();
+            //correct name of columns for select
+            std::vector<config::ColumnSchema> new_schema;
+            const auto& schema = table_it->second->getSchema();
+            for( auto old_s : schema){
+                for ( auto new_s : assignment){
+                    if(old_s.name == new_s.first){
+                        new_schema.push_back(old_s);
+                    }
+                }
+            }
+            if(new_schema.size() != assignment.size()){
+                response->setStatus(false);
+                response->setMessage("incorrect column names assignment");
+                break;
+            }
+
+            /*
+            for( auto val_col : assignment){
+                            std::vector<std::string> assignment_column_name;
+                            std::vector<std::vector<std::string>> PCNF_assignment;
+                            auto assignment_Expression = parse_where(val_col.second, assignment_column_name, PCNF_assignment);
+                            std::vector<config::ColumnValue> assignment_statement(assignment_column_name.size());
+                            for(int i = 1; i < assignment_column_name.size()+1; ++i) {
+                                assignment_statement[i] = row.second[assignment_column_name[i]];
+                            }
+                            auto assignment_ans = assignment_Expression ->apply(assignment_statement);
+                            new_row[val_col.first] = assignment_ans[assignment_column_name.size()+1];
+                        }
+             */
 
             std::vector<std::string> column_name;
             std::vector<std::vector<std::string>> PCNF;
             auto Expression = parse_where(condition, column_name, PCNF);
 
-            //надо будет написать проверку на выражение
+            //correct result of condition
+            if(std::dynamic_pointer_cast<SpaceOp>(Expression)){
+                response -> setStatus(false);
+                response -> setMessage("wrong condition");
+                break;
+            }
 
-            std::vector<config::ColumnValue> statement(column_name.size());
-            //надо будет проверить налиие колонки;
+            std::vector<std::string> condition_name;
+            for( auto new_s : column_name){
+                for ( auto old_s : schema){
+                    if(old_s.name == new_s){
+                        condition_name.push_back(new_s);
+                    }
+                }
+            }
+
+            //correct name of columns condition
+            if(condition_name.size() != column_name.size()){
+                response ->setStatus(false);
+                response ->setMessage("incorrect column names select in condition");
+                break;
+            }
+
+            //correct of type in condition;
+            bool is_index = true;
+            auto recordIndex = getTable(table_name)->Table::record_index(PCNF, is_index);
+            std::vector<config::ColumnValue> statement(1, true);
+            //is_index = false;
+
+            for( auto new_s : column_name){
+                for ( auto old_s : schema){
+                    if(old_s.name == new_s){
+                        if(old_s.type == config::ColumnType::INT){
+                            statement.push_back(300405);
+                        }else if(old_s.type == config::ColumnType::STRING){
+                            statement.push_back("");
+                        }else if(old_s.type == config::ColumnType::BOOL){
+                            statement.push_back(false);
+                        }else{
+                            statement.push_back({});
+                        }
+                    }
+                }
+            }
+            auto check_ans = Expression->apply(statement);
+            if(!std::get<bool>(check_ans[0])){
+                response->setStatus(false);
+                response->setMessage("error of type");
+                break;
+            }
+
+            statement.assign(column_name.size()+1, 0);
             for( auto row : table_it->second->getData()){
-                
-                for(int i = 0; i < column_name.size(); ++i) {
-                    statement[i] = row.second[column_name[i]];
+                statement.assign(column_name.size()+1, 0);
+                if(is_index && recordIndex.find(row.first) == recordIndex.end()){
+                    continue;
+                }
+                for(int i = 1; i < column_name.size()+1; ++i) {
+                    statement[i] = row.second[column_name[i-1]];
                 }
                 auto ans = Expression ->apply(statement);
-                bool isWhere = false ;
-                if(std::holds_alternative<std::monostate>(ans[column_name.size()])){
-                    isWhere = true;
-                }else if(std::get<bool>(ans[column_name.size()])){
-                    isWhere = true;
-                }
-                if(isWhere){
-                    config::RowType new_row;
-                    for( auto val_col : assignment){
-                        std::vector<std::string> assignment_column_name;
-                        std::vector<std::vector<std::string>> PCNF;
-                        auto assignment_Expression = parse_where(val_col.second, assignment_column_name, PCNF);
-                        std::vector<config::ColumnValue> assignment_statement(assignment_column_name.size());
-                        for(int i = 0; i < assignment_column_name.size(); ++i) {
-                            assignment_statement[i] = row.second[assignment_column_name[i]];
+                if(std::holds_alternative<bool>(ans[column_name.size()+1])) {
+                    if (std::get<bool>(ans[column_name.size() + 1])) {
+                        config::RowType new_row;
+                        for( auto val_col : assignment){
+                            std::vector<std::string> assignment_column_name;
+                            std::vector<std::vector<std::string>> PCNF_assignment;
+                            auto assignment_Expression = parse_where(val_col.second, assignment_column_name, PCNF_assignment);
+                            std::vector<config::ColumnValue> assignment_statement(assignment_column_name.size()+1);
+                            for(int i = 1; i < assignment_column_name.size()+1; ++i) {
+                                assignment_statement[i] = row.second[assignment_column_name[i-1]];
+                            }
+                            auto assignment_ans = assignment_Expression ->apply(assignment_statement);
+                            new_row[val_col.first] = assignment_ans[assignment_column_name.size()+1];
                         }
-                        auto assignment_ans = assignment_Expression ->apply(assignment_statement);
-                        new_row[val_col.first] = assignment_ans[assignment_column_name.size()];
+                        tables_[table_name]->updateIndices(row.first, new_row);
+                        tables_[table_name]->updateRowType(row.first, new_row);
                     }
-                    tables_[table_name]->updateIndices(row.first, new_row);
-                    tables_[table_name]->updateRowType(row.first, new_row);
+                }else if(std::holds_alternative<std::monostate>(ans[column_name.size()+1])){
+                }else{
+                    response -> setStatus(false);
+                    response -> setMessage("condition cannot be reduced to a boolean type");
+                    break;
                 }
             }
             response->setStatus(true);
             break;
+            /*
+
+                }
+            }
+             */
         }
 
         // Handle other command types if needed

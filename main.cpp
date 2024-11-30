@@ -35,7 +35,7 @@ int main() {
     auto test_table = db.getTable(new_table);
     if (!test_table) {
         std::cerr << "Таблица '" << new_table << "' не найдена.\n";
-        return 1;
+        return 0;
     }
 
     const auto& data = test_table->getData();
@@ -85,26 +85,3 @@ int main() {
 
     return 0;
 }
-/*
-memdb::Database& db = memdb::Database::getInstance();
-
-    std::string create_table_query = "create table medicine ({key, autoincrement} id : int32, doctors : string[32], equipment : bool, age : int32)";
-    auto res = db.execute(create_table_query);
-
-    std::string create_index_query = "create ordered index on medicine by age, doctors";
-    auto res1 = db.execute(create_index_query);
-
-    for (int i = 0; i <= 10000; ++i) {
-        std::string insert_query = R"(insert (doctors = "Strange)" + std::to_string(i) + R"(", age =)" + std::to_string(i) + R"() to medicine)";
-        auto res2 = db.execute(insert_query);
-    }
-
-    std::unique_ptr<memdb::Response> res5;
-    std::string select_query = R"(select doctors, age from medicine where ( ( id % 2 = 1 && id > 200 ) || ( doctors <= "Strange5" ) ) && ( id = 200 ) && ( id < 400 ))";
-    for(int i = 0; i < 50; ++i){
-        res5 = db.execute(select_query);
-        auto data = res5->getData();
-        PrintData(data, select_query);
-    }
-}
-*/

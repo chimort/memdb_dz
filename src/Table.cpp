@@ -921,8 +921,8 @@ std::unordered_set<int> Table::record_index(const std::vector<std::vector<std::s
         return intersect(ans);
     }
     for (const auto &item: PCNF) {
-        config::ColumnValue col_value;
-        std::string col_name;
+        config::ColumnValue col_value = std::monostate();
+        std::string col_name = "(NULL)";
         bool is_first = true;
         for (int i = 0; i < 2; ++i) {
             std::string str = item[i];
@@ -944,6 +944,10 @@ std::unordered_set<int> Table::record_index(const std::vector<std::vector<std::s
                 }
                 col_name = str;
             }
+        }
+
+        if(std::holds_alternative<std::monostate>(col_value) || col_name == "(NULL)"){
+            continue;
         }
 
         std::vector<int> num;
