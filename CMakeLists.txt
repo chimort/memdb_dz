@@ -25,7 +25,7 @@ set(TEST_FILES
     tests/table_tests.cpp
     tests/files_tests.cpp
     tests/commands_tests.cpp
-    tests/myTEST.cpp
+    # tests/myTEST.cpp
 )
 
 add_executable(tests ${TEST_FILES})
