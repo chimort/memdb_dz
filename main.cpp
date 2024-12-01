@@ -54,7 +54,7 @@ int main() {
         std::cout << "-------------------\n";
     }
 
-    auto responce = db.execute("insert (doctors = \"best doctor\", age = 1488) to test");
+    auto responce = db.execute("insert (doctors = \"best doctor\", age = 8) to test");
     auto r = db.execute("insert (id = 0) to test");
     std::cout << r->getStatus();
 
