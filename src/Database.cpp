@@ -18,22 +18,20 @@ Database& Database::getInstance()
 
 bool Database::loadFromFile(const std::string& filename, const std::string& table_name)
 {
-    auto it = tables_.find(table_name);
-    if (it == tables_.end()) {
-        std::cerr << "Table '" << table_name << "' not found." << std::endl;
-        return false;
-    }
-
     std::ifstream ifs(filename);
     if (!ifs.is_open()) {
         std::cerr << "Failed to open file for reading: " << filename << std::endl;
         return false;
     }
 
-    if (!it->second->loadFromCSV(ifs)) {
-        std::cerr << "Failed to load table '" << table_name << "' from CSV." << std::endl;
+    std::shared_ptr<Table> table = std::make_shared<Table>();
+
+    if (!table->loadFromCSV(ifs)) {
+        std::cerr << "Failed to load table from CSV." << std::endl;
         return false;
     }
+
+    tables_[table_name] = table;
 
     return true;
 }
