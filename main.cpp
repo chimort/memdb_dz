@@ -1,11 +1,12 @@
 #include "Database.h"
+#include "Print_tests.h"
 #include "utils.h"
 #include <iostream>
+
 
 int main() {
 
     memdb::Database& db = memdb::Database::getInstance();
-
     // Создаем таблицу "users"
     std::string create_table_query = "create table medicine ({key, autoincrement} id : int32, doctors : string[32], equipment : bool, age : int32)";
     auto res = db.execute(create_table_query);
